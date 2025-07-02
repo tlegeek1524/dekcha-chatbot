@@ -70,7 +70,7 @@ async function handleEvent(event) {
     return Promise.resolve(null);
   }
 
-  const userid = event.source.userid;
+  const userid = event.source.userId;
   const messageText = event.message.text.trim();
   
   console.log(`[handleEvent] User ID: ${userid}`);
