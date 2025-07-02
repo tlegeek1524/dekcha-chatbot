@@ -85,7 +85,14 @@ async function handleEvent(event) {
 
 // ฟังก์ชันหลักสำหรับดึงข้อมูลผู้ใช้
 async function getUserData(userId) {
-  console.log(`[getUserData] กำลังดึงข้อมูลผู้ใช้ userId: ${userId}`);
+  console.log(`[getUserData] 🔍 เริ่มต้นการดึงข้อมูลผู้ใช้`);
+  console.log(`[getUserData] 📋 Query Parameters:`);
+  console.log(`├─ Table: 'user'`);
+  console.log(`├─ Select: '*' (ทุก column)`);
+  console.log(`├─ Where: userId = '${userId}'`);
+  console.log(`└─ Method: .single()`);
+  
+  const startTime = Date.now();
   
   const { data: user, error } = await supabase
     .from('user')
@@ -93,23 +100,37 @@ async function getUserData(userId) {
     .eq('userId', userId)
     .single();
 
+  const queryTime = Date.now() - startTime;
+  console.log(`[getUserData] ⏱️ Query completed in ${queryTime}ms`);
+
   if (error) {
+    console.log(`[getUserData] ❌ Database Error Details:`);
+    console.log(`├─ Error Code: ${error.code}`);
+    console.log(`├─ Error Message: ${error.message}`);
+    console.log(`└─ Error Details:`, JSON.stringify(error.details, null, 2));
+    
     if (error.code === 'PGRST116') {
-      console.log(`[getUserData] ❌ ไม่พบผู้ใช้งาน userId: ${userId}`);
+      console.log(`[getUserData] 🚫 ไม่พบผู้ใช้งาน userId: ${userId} ในฐานข้อมูล`);
       return { user: null, found: false };
     }
-    console.error(`[getUserData] ❌ Database Error:`, error);
     throw error;
   }
 
-  // แสดง log ข้อมูลผู้ใช้ที่ดึงมาได้
-  console.log(`[getUserData] ✅ พบข้อมูลผู้ใช้:`);
-  console.log(`├─ userId: ${user.userId}`);
-  console.log(`├─ displayName: ${user.displayName || 'ไม่ระบุ'}`);
-  console.log(`├─ points: ${user.points || 0}`);
-  console.log(`├─ level: ${user.level || 'ไม่ระบุ'}`);
-  console.log(`├─ createdAt: ${user.createdAt || 'ไม่ระบุ'}`);
-  console.log(`└─ updatedAt: ${user.updatedAt || 'ไม่ระบุ'}`);
+  // แสดงข้อมูลดิบที่ดึงมาจากฐานข้อมูล
+  console.log(`[getUserData] ✅ SUCCESS - ดึงข้อมูลจาก table 'user' สำเร็จ`);
+  console.log(`[getUserData] 📊 Raw Data from Database:`, JSON.stringify(user, null, 2));
+  
+  // แสดงข้อมูลในรูปแบบที่อ่านง่าย
+  console.log(`[getUserData] 📋 User Data Summary:`);
+  console.log(`├─ userId: ${user.userId || 'NULL'}`);
+  console.log(`├─ displayName: ${user.displayName || 'NULL'}`);
+  console.log(`├─ points: ${user.points !== undefined ? user.points : 'NULL'}`);
+  console.log(`├─ level: ${user.level || 'NULL'}`);
+  console.log(`├─ email: ${user.email || 'NULL'}`);
+  console.log(`├─ pictureUrl: ${user.pictureUrl || 'NULL'}`);
+  console.log(`├─ createdAt: ${user.createdAt || 'NULL'}`);
+  console.log(`├─ updatedAt: ${user.updatedAt || 'NULL'}`);
+  console.log(`└─ Total Fields: ${Object.keys(user).length}`);
 
   return { user, found: true };
 }
