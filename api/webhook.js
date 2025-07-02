@@ -63,18 +63,18 @@ async function handleEvent(event) {
   }
 
   const userMessage = event.message.text.trim().toLowerCase();
-  const userId = event.source.userId;
+  const userid = event.source.userid;
 
   switch (userMessage) {
     case 'แต้มคงเหลือ':
     case 'แต้ม':
     case 'points':
-      return handlePointBalance(event, userId);
+      return handlePointBalance(event, userid);
     case 'ข้อมูลผู้ใช้งาน':
     case 'ข้อมูลสมาชิก':
     case 'ข้อมูล':
     case 'profile':
-      return handleUserInfo(event, userId);
+      return handleUserInfo(event, userid);
     case 'เมนู':
     case 'menu':
       return client.replyMessage(event.replyToken, createMenuFlexMessage());
@@ -84,15 +84,15 @@ async function handleEvent(event) {
 }
 
 // จัดการคำสั่งดูแต้มคงเหลือ
-async function handlePointBalance(event, userId) {
+async function handlePointBalance(event, userid) {
   try {
     const { data: user, error } = await supabase
       .from('user')
       .select('*')
-      .eq('userId', userId)
+      .eq('userid', userid)
       .single();
 
-    console.log('handlePointBalance:', { userId, user, error }); // เพิ่ม log
+    console.log('handlePointBalance:', { userid, user, error }); // เพิ่ม log
 
     if (error || !user) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
@@ -105,15 +105,15 @@ async function handlePointBalance(event, userId) {
 }
 
 // จัดการคำสั่งดูข้อมูลผู้ใช้งาน
-async function handleUserInfo(event, userId) {
+async function handleUserInfo(event, userid) {
   try {
     const { data: user, error } = await supabase
       .from('user')
       .select('*')
-      .eq('userId', userId)
+      .eq('userid', userid)
       .single();
 
-    console.log('handleUserInfo:', { userId, user, error }); // เพิ่ม log
+    console.log('handleUserInfo:', { userid, user, error }); // เพิ่ม log
 
     if (error || !user) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
