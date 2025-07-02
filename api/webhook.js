@@ -3,7 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 // ตั้งค่า Supabase
 const supabaseUrl = 'https://supabase.com/dashboard/project/sgncxqqiizwnnffjffok';  // แก้เป็น URL โปรเจกต์คุณ
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnbmN4cXFpaXp3bm5mZmpmZm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0ODIwMDQsImV4cCI6MjA2NzA1ODAwNH0.nQegkuQ1sC5b_8Hr70FbBkm0nulsLPNOGervJe9Su0A';         // แก้เป็น Key ของคุณ
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnbmN4cXFpaXp3bm5mZmpmZm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0ODIwMDQsImV4cCI6MjA2NzA1ODAwNH0.nQegkuQ1sC5b_8Hr70FbBkm0nulsLPNOGervJe9Su0A'; // แก้เป็น Key ของคุณ
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -86,14 +86,16 @@ async function handleEvent(event) {
 // จัดการคำสั่งดูแต้มคงเหลือ
 async function handlePointBalance(event, userId) {
   try {
-    const user = await prisma.user.findUnique({
-      where: { userId: userId },
-    });
-    if (user) {
-      return client.replyMessage(event.replyToken, createPointFlexMessage(user));
-    } else {
+    const { data: user, error } = await supabase
+      .from('User')
+      .select('*')
+      .eq('userId', userId)
+      .single();
+
+    if (error || !user) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
+    return client.replyMessage(event.replyToken, createPointFlexMessage(user));
   } catch (err) {
     console.error(err);
     return client.replyMessage(event.replyToken, createErrorFlexMessage('ไม่สามารถดึงข้อมูลแต้มสะสมได้'));
@@ -103,14 +105,16 @@ async function handlePointBalance(event, userId) {
 // จัดการคำสั่งดูข้อมูลผู้ใช้งาน
 async function handleUserInfo(event, userId) {
   try {
-    const user = await prisma.user.findUnique({
-      where: { userId: userId },
-    });
-    if (user) {
-      return client.replyMessage(event.replyToken, createUserInfoFlexMessage(user));
-    } else {
+    const { data: user, error } = await supabase
+      .from('User')
+      .select('*')
+      .eq('userId', userId)
+      .single();
+
+    if (error || !user) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
+    return client.replyMessage(event.replyToken, createUserInfoFlexMessage(user));
   } catch (err) {
     console.error(err);
     return client.replyMessage(event.replyToken, createErrorFlexMessage('ไม่สามารถดึงข้อมูลสมาชิกได้'));
@@ -340,12 +344,82 @@ function getMemberLevel(points) {
 }
 
 // สร้าง Flex Message เมนู
-function createMenuFlexMessage() { /* (เหมือนโค้ดเดิมของคุณ) */ }
+function createMenuFlexMessage() {
+  // ตัวอย่างเมนู (ปรับตามต้องการ)
+  return {
+    type: 'flex',
+    altText: TEXT.MENU_TITLE,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          { type: 'text', text: TEXT.MENU_TITLE, weight: 'bold', size: 'xl', color: '#FFFFFF', align: 'center' }
+        ],
+        backgroundColor: THEME.HEADER_BG,
+        paddingTop: '20px',
+        paddingBottom: '20px',
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          { type: 'text', text: '1. กาแฟ\n2. ชา\n3. ขนมหวาน', wrap: true }
+        ],
+        paddingAll: '20px',
+      }
+    }
+  };
+}
 
 // สร้าง Flex Message ช่วยเหลือ
-function createHelpFlexMessage() { /* (เหมือนโค้ดเดิมของคุณ) */ }
+function createHelpFlexMessage() {
+  return {
+    type: 'flex',
+    altText: TEXT.HELP_TITLE,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          { type: 'text', text: TEXT.HELP_TITLE, weight: 'bold', size: 'xl', color: '#FFFFFF', align: 'center' }
+        ],
+        backgroundColor: THEME.HEADER_BG,
+        paddingTop: '20px',
+        paddingBottom: '20px',
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          { type: 'text', text: 'พิมพ์ "แต้มคงเหลือ" เพื่อดูแต้มสะสม\nพิมพ์ "ข้อมูลสมาชิก" เพื่อดูข้อมูลผู้ใช้งาน\nพิมพ์ "เมนู" เพื่อดูเมนูสินค้า', wrap: true }
+        ],
+        paddingAll: '20px',
+      }
+    }
+  };
+}
 
-// สร้าง Flex Message ข้อผิดพลาด
+// สร้าง Flex Message แสดงข้อความผิดพลาด
 function createErrorFlexMessage(msg) {
-  return { type: 'text', text: `${TEXT.ERROR_TITLE}: ${msg}` };
+  return {
+    type: 'flex',
+    altText: TEXT.ERROR_TITLE,
+    contents: {
+      type: 'bubble',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          { type: 'text', text: TEXT.ERROR_TITLE, weight: 'bold', size: 'xl', color: THEME.ERROR },
+          { type: 'text', text: msg || TEXT.ERROR_MESSAGE, margin: 'md', wrap: true },
+        ],
+      },
+      styles: {
+        body: { backgroundColor: THEME.BACKGROUND },
+      },
+    },
+  };
 }
