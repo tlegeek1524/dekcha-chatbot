@@ -103,7 +103,7 @@ async function handlePointBalance(event, userId) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
 
-    const user = users[0]; // เอาข้อมูลแรก
+    const user = users.find(u => u.userId === userId); // หาข้อมูลที่ตรงกับ userId
     return client.replyMessage(event.replyToken, createPointFlexMessage(user));
   } catch (err) {
     console.error('[handlePointBalance] Exception:', err);
@@ -131,7 +131,7 @@ async function handleUserInfo(event, userId) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
 
-    const user = users[0]; // เอาข้อมูลแรก
+    const user = users.find(u => u.userId === userId); // หาข้อมูลที่ตรงกับ userId
     return client.replyMessage(event.replyToken, createUserInfoFlexMessage(user));
   } catch (err) {
     console.error('[handleUserInfo] Exception:', err);
