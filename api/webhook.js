@@ -70,10 +70,10 @@ async function handleEvent(event) {
     return Promise.resolve(null);
   }
 
-  const userId = event.source.userId;
+  const userid = event.source.userid;
   const messageText = event.message.text.trim();
   
-  console.log(`[handleEvent] User ID: ${userId}`);
+  console.log(`[handleEvent] User ID: ${userid}`);
   console.log(`[handleEvent] Message: "${messageText}"`);
 
   try {
@@ -83,13 +83,13 @@ async function handleEvent(event) {
       case 'แต้ม':
       case 'point':
       case 'points':
-        return await handlePointBalance(event, userId);
+        return await handlePointBalance(event, userid);
         
       case 'ข้อมูลผู้ใช้งาน':
       case 'ข้อมูลสมาชิก':
       case 'profile':
       case 'info':
-        return await handleUserInfo(event, userId);
+        return await handleUserInfo(event, userid);
         
       case 'เมนู':
       case 'menu':
@@ -102,7 +102,7 @@ async function handleEvent(event) {
       case 'สวัสดี':
       case 'hello':
       case 'hi':
-        return await handleWelcome(event, userId);
+        return await handleWelcome(event, userid);
         
       default:
         return await handleDefault(event);
@@ -113,14 +113,14 @@ async function handleEvent(event) {
   }
 }
 
-async function getUserData(userId) {
+async function getUserData(userid) {
   console.log(`[getUserData] ดึงข้อมูลจาก table 'users'`);
-  console.log(`[getUserData] userId: '${userId}' (type: ${typeof userId})`);
+  console.log(`[getUserData] userid: '${userid}' (type: ${typeof userid})`);
 
-  // Validate userId
-  if (!userId || typeof userId !== 'string') {
-    console.error(`[getUserData] Invalid userId: '${userId}'`);
-    throw new Error('Invalid userId');
+  // Validate userid
+  if (!userid || typeof userid !== 'string') {
+    console.error(`[getUserData] Invalid userid: '${userid}'`);
+    throw new Error('Invalid userid');
   }
 
   // Debug mode: ดึงข้อมูล 5 แถวแรกถ้าเปิด debug
@@ -136,28 +136,28 @@ async function getUserData(userId) {
     }
   }
 
-  // ค้นหาข้อมูลด้วย userId โดยไม่ใช้ .single()
-  console.log(`[getUserData] Querying table 'users' for userId: '${userId}'`);
+  // ค้นหาข้อมูลด้วย userid โดยไม่ใช้ .single()
+  console.log(`[getUserData] Querying table 'users' for userid: '${userid}'`);
 const { data: users, error } = await supabase
   .from('users')
   .select('*')
-  .eq('userId', userId.trim());
+  .eq('userid', userid.trim());
 
 // เพิ่มการ log เพื่อดูค่า users และ error
 console.log('[getUserData] ผลลัพธ์จาก Supabase:', { users, error });
 
 if (error) {
-  console.error(`[getUserData] Supabase query error for userId '${userId}':`, error.message, error.details);
+  console.error(`[getUserData] Supabase query error for userid '${userid}':`, error.message, error.details);
   return { user: null, found: false };
 }
 
 if (!users || users.length === 0) {
-  console.log(`[getUserData] ❌ ไม่พบ userId: '${userId}' in table 'users'`);
+  console.log(`[getUserData] ❌ ไม่พบ userid: '${userid}' in table 'users'`);
   return { user: null, found: false };
 }
 
 if (users.length > 1) {
-  console.warn(`[getUserData] ⚠️ Found multiple users for userId: '${userId}'`, JSON.stringify(users, null, 2));
+  console.warn(`[getUserData] ⚠️ Found multiple users for userid: '${userid}'`, JSON.stringify(users, null, 2));
 }
 
 const user = users[0]; // ใช้แถวแรกถ้ามีหลายแถว
@@ -166,40 +166,40 @@ return { user, found: true };
 }
 
 // ฟังก์ชันสำหรับจัดการการตอบกลับ
-async function handleUserResponse(event, userId, messageCreator, errorMsg) {
+async function handleUserResponse(event, userid, messageCreator, errorMsg) {
   try {
-    const { user, found } = await getUserData(userId);
+    const { user, found } = await getUserData(userid);
 
     if (!found) {
-      console.log(`[handleUserResponse] User not found for userId: "${userId}"`);
+      console.log(`[handleUserResponse] User not found for userid: "${userid}"`);
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
 
     return client.replyMessage(event.replyToken, messageCreator(user));
 
   } catch (error) {
-    console.error(`[handleUserResponse] Exception for userId "${userId}":`, error.message, error.stack);
+    console.error(`[handleUserResponse] Exception for userid "${userid}":`, error.message, error.stack);
     return client.replyMessage(event.replyToken, createErrorFlexMessage(errorMsg));
   }
 }
 
 // ดึงแต้มคงเหลือ - เวอร์ชันย่อ
-async function handlePointBalance(event, userId) {
-  console.log(`[handlePointBalance] เริ่มกระบวนการดึงแต้มสะสมสำหรับ userId: "${userId}"`);
+async function handlePointBalance(event, userid) {
+  console.log(`[handlePointBalance] เริ่มกระบวนการดึงแต้มสะสมสำหรับ userid: "${userid}"`);
   return handleUserResponse(
     event, 
-    userId, 
+    userid, 
     createPointFlexMessage, 
     'ไม่สามารถดึงข้อมูลแต้มสะสมได้'
   );
 }
 
 // ดึงข้อมูลผู้ใช้งาน - เวอร์ชันย่อ
-async function handleUserInfo(event, userId) {
-  console.log(`[handleUserInfo] เริ่มกระบวนการดึงข้อมูลสมาชิกสำหรับ userId: '${userId}'`);
+async function handleUserInfo(event, userid) {
+  console.log(`[handleUserInfo] เริ่มกระบวนการดึงข้อมูลสมาชิกสำหรับ userid: '${userid}'`);
   return handleUserResponse(
     event, 
-    userId, 
+    userid, 
     createUserInfoFlexMessage, 
     'ไม่สามารถดึงข้อมูลสมาชิกได้'
   );
@@ -218,11 +218,11 @@ async function handleHelp(event) {
 }
 
 // จัดการข้อความต้อนรับ
-async function handleWelcome(event, userId) {
-  console.log(`[handleWelcome] ข้อความต้อนรับสำหรับ userId: "${userId}"`);
+async function handleWelcome(event, userid) {
+  console.log(`[handleWelcome] ข้อความต้อนรับสำหรับ userid: "${userid}"`);
   
   try {
-    const { user, found } = await getUserData(userId);
+    const { user, found } = await getUserData(userid);
     
     if (found) {
       console.log(`[handleWelcome] Found user: ${user.name}`);
@@ -232,7 +232,7 @@ async function handleWelcome(event, userId) {
       return client.replyMessage(event.replyToken, createWelcomeMessage());
     }
   } catch (error) {
-    console.error(`[handleWelcome] Error for userId "${userId}":`, error.message, error.stack);
+    console.error(`[handleWelcome] Error for userid "${userid}":`, error.message, error.stack);
     return client.replyMessage(event.replyToken, createWelcomeMessage());
   }
 }
