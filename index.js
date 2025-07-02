@@ -81,7 +81,7 @@ async function handlePointBalance(event, userId) {
   try {
     const user = await prisma.user.findUnique({
       where: { userId: userId },
-    });
+    }); 
     if (user) {
       return client.replyMessage(event.replyToken, createPointFlexMessage(user));
     } else {
