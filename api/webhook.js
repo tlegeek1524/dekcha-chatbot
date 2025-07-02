@@ -138,29 +138,31 @@ async function getUserData(userId) {
 
   // ค้นหาข้อมูลด้วย userId โดยไม่ใช้ .single()
   console.log(`[getUserData] Querying table 'users' for userId: '${userId}'`);
-  const { data: users, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('userId', userId.trim());
+const { data: users, error } = await supabase
+  .from('users')
+  .select('*')
+  .eq('userId', userId.trim());
 
-  if (error) {
-    console.error(`[getUserData] Supabase query error for userId '${userId}':`, error.message, error.details);
-    return { user: null, found: false };
-  }
+// เพิ่มการ log เพื่อดูค่า users และ error
+console.log('[getUserData] ผลลัพธ์จาก Supabase:', { users, error });
 
-  if (!users || users.length === 0) {
-    console.log(`[getUserData] ❌ ไม่พบ userId: '${userId}' in table 'users'`);
-    return { user: null, found: false };
-  }
+if (error) {
+  console.error(`[getUserData] Supabase query error for userId '${userId}':`, error.message, error.details);
+  return { user: null, found: false };
+}
 
-  if (users.length > 1) {
-    console.warn(`[getUserData] ⚠️ Found multiple users for userId: '${userId}'`, JSON.stringify(users, null, 2));
-    // อาจเลือกส่ง user ตัวแรกหรือจัดการตามความเหมาะสม
-  }
+if (!users || users.length === 0) {
+  console.log(`[getUserData] ❌ ไม่พบ userId: '${userId}' in table 'users'`);
+  return { user: null, found: false };
+}
 
-  const user = users[0]; // ใช้แถวแรกถ้ามีหลายแถว
-  console.log(`[getUserData] ข้อมูลที่ค้นหาได้:`, JSON.stringify(user, null, 2));
-  return { user, found: true };
+if (users.length > 1) {
+  console.warn(`[getUserData] ⚠️ Found multiple users for userId: '${userId}'`, JSON.stringify(users, null, 2));
+}
+
+const user = users[0]; // ใช้แถวแรกถ้ามีหลายแถว
+console.log(`[getUserData] ข้อมูลที่ค้นหาได้:`, JSON.stringify(user, null, 2));
+return { user, found: true };
 }
 
 // ฟังก์ชันสำหรับจัดการการตอบกลับ
@@ -194,7 +196,7 @@ async function handlePointBalance(event, userId) {
 
 // ดึงข้อมูลผู้ใช้งาน - เวอร์ชันย่อ
 async function handleUserInfo(event, userId) {
-  console.log(`[handleUserInfo] เริ่มกระบวนการดึงข้อมูลสมาชิกสำหรับ userId: "${userId}"`);
+  console.log(`[handleUserInfo] เริ่มกระบวนการดึงข้อมูลสมาชิกสำหรับ userId: '${userId}'`);
   return handleUserResponse(
     event, 
     userId, 
