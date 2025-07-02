@@ -5,7 +5,10 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = 'https://mhpetiaaadwsvrtbkmue.supabase.co'
 const supabaseKey = process.env.SUPABASE_KEY
 
+// Log การเชื่อมต่อ Supabase
+console.log('[Supabase] Initializing connection with URL:', supabaseUrl);
 const supabase = createClient(supabaseUrl, supabaseKey);
+console.log('[Supabase] Connection initialized successfully');
 
 // LINE Bot configuration
 const config = {
@@ -51,7 +54,7 @@ module.exports = async (req, res) => {
     const results = await Promise.all(events.map(handleEvent));
     return res.status(200).json(results);
   } catch (err) {
-    console.error(err);
+    console.error('[Main] Error processing events:', err);
     return res.status(500).send('Internal Server Error');
   }
 };
@@ -122,28 +125,30 @@ async function getUserData(userId) {
 
   // Debug mode: ดึงข้อมูล 5 แถวแรกถ้าเปิด debug
   if (process.env.DEBUG_MODE === 'true') {
+    console.log('[getUserData] Debug mode enabled, fetching first 5 rows from users table');
     const { data: allUsers, error: getAllError } = await supabase
       .from('users')
       .select('*')
       .limit(5);
-    console.log(`[getUserData] ข้อมูลใน table 'users' (5 แถวแรก):`, allUsers);
-    if (getAllError) console.error(`[getUserData] Debug query error:`, getAllError);
+    console.log(`[getUserData] ข้อมูลใน table 'users' (5 แถวแรก):`, JSON.stringify(allUsers, null, 2));
+    if (getAllError) console.error(`[getUserData] Debug query error:`, getAllError.message, getAllError.details);
   }
 
   // ค้นหาข้อมูลด้วย userId
+  console.log(`[getUserData] Querying table 'users' for userId: "${userId}"`);
   const { data: user, error } = await supabase
     .from('users')
     .select('*')
-    .eq('userId', userId.trim()) // ป้องกัน whitespace
+    .eq('userId', userId.trim())
     .single();
 
-  console.log(`[getUserData] ข้อมูลที่ค้นหาได้:`, user);
-
-  if (error || !user) {
+  if (error) {
+    console.error(`[getUserData] Supabase query error for userId "${userId}":`, error.message, error.details);
     console.log(`[getUserData] ❌ ไม่พบ userId: "${userId}"`);
     return { user: null, found: false };
   }
 
+  console.log(`[getUserData] ข้อมูลที่ค้นหาได้:`, JSON.stringify(user, null, 2));
   return { user, found: true };
 }
 
@@ -153,20 +158,21 @@ async function handleUserResponse(event, userId, messageCreator, errorMsg) {
     const { user, found } = await getUserData(userId);
 
     if (!found) {
+      console.log(`[handleUserResponse] User not found for userId: "${userId}"`);
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
 
     return client.replyMessage(event.replyToken, messageCreator(user));
 
   } catch (error) {
-    console.error(`[handleUserResponse] Exception:`, error);
+    console.error(`[handleUserResponse] Exception for userId "${userId}":`, error.message, error.stack);
     return client.replyMessage(event.replyToken, createErrorFlexMessage(errorMsg));
   }
 }
 
 // ดึงแต้มคงเหลือ - เวอร์ชันย่อ
 async function handlePointBalance(event, userId) {
-  console.log(`[handlePointBalance] เริ่มกระบวนการดึงแต้มสะสม`);
+  console.log(`[handlePointBalance] เริ่มกระบวนการดึงแต้มสะสมสำหรับ userId: "${userId}"`);
   return handleUserResponse(
     event, 
     userId, 
@@ -177,7 +183,7 @@ async function handlePointBalance(event, userId) {
 
 // ดึงข้อมูลผู้ใช้งาน - เวอร์ชันย่อ
 async function handleUserInfo(event, userId) {
-  console.log(`[handleUserInfo] เริ่มกระบวนการดึงข้อมูลสมาชิก`);
+  console.log(`[handleUserInfo] เริ่มกระบวนการดึงข้อมูลสมาชิกสำหรับ userId: "${userId}"`);
   return handleUserResponse(
     event, 
     userId, 
@@ -200,18 +206,20 @@ async function handleHelp(event) {
 
 // จัดการข้อความต้อนรับ
 async function handleWelcome(event, userId) {
-  console.log(`[handleWelcome] ข้อความต้อนรับ`);
+  console.log(`[handleWelcome] ข้อความต้อนรับสำหรับ userId: "${userId}"`);
   
   try {
     const { user, found } = await getUserData(userId);
     
     if (found) {
+      console.log(`[handleWelcome] Found user: ${user.name}`);
       return client.replyMessage(event.replyToken, createWelcomeMessage(user.name));
     } else {
+      console.log(`[handleWelcome] No user found, sending generic welcome`);
       return client.replyMessage(event.replyToken, createWelcomeMessage());
     }
   } catch (error) {
-    console.error(`[handleWelcome] Error:`, error);
+    console.error(`[handleWelcome] Error for userId "${userId}":`, error.message, error.stack);
     return client.replyMessage(event.replyToken, createWelcomeMessage());
   }
 }
@@ -573,6 +581,8 @@ function createMenuFlexMessage() {
     contents: {
       type: 'bubble',
       header: {
+       
+
         type: 'box',
         layout: 'vertical',
         contents: [
