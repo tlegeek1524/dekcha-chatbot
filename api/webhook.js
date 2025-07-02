@@ -87,7 +87,7 @@ async function handleEvent(event) {
 async function handlePointBalance(event, userId) {
   try {
     const { data: user, error } = await supabase
-      .from('user')
+      .from('User')
       .select('*')
       .eq('userId', userId)
       .single();
@@ -106,7 +106,7 @@ async function handlePointBalance(event, userId) {
 async function handleUserInfo(event, userId) {
   try {
     const { data: user, error } = await supabase
-      .from('user')
+      .from('User')
       .select('*')
       .eq('userId', userId)
       .single();
