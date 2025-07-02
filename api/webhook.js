@@ -117,15 +117,15 @@ async function getUserData(userId) {
   
   // ลองดึงข้อมูลทั้งหมดใน table ก่อน (เพื่อดูว่ามีข้อมูลอะไรบ้าง)
   const { data: allUsers, error: getAllError } = await supabase
-    .from('user')
+    .from('users')
     .select('*')
     .limit(5);
-  
-  console.log(`[getUserData] ข้อมูลใน table 'user' ทั้งหมด (5 แถวแรก):`, allUsers);
-  
+
+  console.log(`[getUserData] ข้อมูลใน table 'users' ทั้งหมด (5 แถวแรก):`, allUsers);
+
   // ลองดึงข้อมูลที่ตรงกับ userId
   const { data: user, error } = await supabase
-    .from('user')
+    .from('users')
     .select('*')
     .eq('userId', userId)
     .single();
