@@ -83,16 +83,21 @@ async function handleEvent(event) {
   }
 }
 
-// จัดการคำสั่งดูแต้มคงเหลือ
+// ดึงแต้มคงเหลือ
 async function handlePointBalance(event, userId) {
   try {
+    console.log(`[handlePointBalance] กำลังดึงข้อมูลจาก table 'user' ด้วย userId: ${userId}`);
     const { data: user, error } = await supabase
-      .from('user') // ตรวจสอบชื่อ table ให้ถูกต้อง (users)
+      .from('user') // ใช้ table 'user'
       .select('*')
-      .eq('userId', userId)
+      .eq('userId', userId) // ใช้ userId ในการค้นหา
       .single();
 
-    console.log('[handlePointBalance] userId:', userId, '| user:', user, '| error:', error);
+    if (error) {
+      console.error(`[handlePointBalance] ERROR:`, error);
+    } else {
+      console.log(`[handlePointBalance] SUCCESS:`, user);
+    }
 
     if (error || !user) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
@@ -104,16 +109,21 @@ async function handlePointBalance(event, userId) {
   }
 }
 
-// จัดการคำสั่งดูข้อมูลผู้ใช้งาน
+// ดึงข้อมูลผู้ใช้งาน
 async function handleUserInfo(event, userId) {
   try {
+    console.log(`[handleUserInfo] กำลังดึงข้อมูลจาก table 'user' ด้วย userId: ${userId}`);
     const { data: user, error } = await supabase
-      .from('user') // ตรวจสอบชื่อ table ให้ถูกต้อง (users)
+      .from('user') // ใช้ table 'user'
       .select('*')
-      .eq('userId', userId)
+      .eq('userId', userId) // ใช้ userId ในการค้นหา
       .single();
 
-    console.log('[handleUserInfo] userId:', userId, '| user:', user, '| error:', error);
+    if (error) {
+      console.error(`[handleUserInfo] ERROR:`, error);
+    } else {
+      console.log(`[handleUserInfo] SUCCESS:`, user);
+    }
 
     if (error || !user) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
