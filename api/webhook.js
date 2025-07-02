@@ -87,21 +87,23 @@ async function handleEvent(event) {
 async function handlePointBalance(event, userId) {
   try {
     console.log(`[handlePointBalance] กำลังดึงข้อมูลจาก table 'user' ด้วย userId: ${userId}`);
-    const { data: user, error } = await supabase
+    const { data: users, error } = await supabase
       .from('user') // ใช้ table 'user'
       .select('*')
-      .eq('userId', userId) // ใช้ userId ในการค้นหา
-      .single();
+      .eq('userId', userId); // ใช้ userId ในการค้นหา
 
     if (error) {
       console.error(`[handlePointBalance] ERROR:`, error);
-    } else {
-      console.log(`[handlePointBalance] SUCCESS:`, user);
+      return client.replyMessage(event.replyToken, createErrorFlexMessage('เกิดข้อผิดพลาดในการดึงข้อมูล'));
     }
 
-    if (error || !user) {
+    console.log(`[handlePointBalance] SUCCESS:`, users);
+
+    if (!users || users.length === 0) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
+
+    const user = users[0]; // เอาข้อมูลแรก
     return client.replyMessage(event.replyToken, createPointFlexMessage(user));
   } catch (err) {
     console.error('[handlePointBalance] Exception:', err);
@@ -113,21 +115,23 @@ async function handlePointBalance(event, userId) {
 async function handleUserInfo(event, userId) {
   try {
     console.log(`[handleUserInfo] กำลังดึงข้อมูลจาก table 'user' ด้วย userId: ${userId}`);
-    const { data: user, error } = await supabase
+    const { data: users, error } = await supabase
       .from('user') // ใช้ table 'user'
       .select('*')
-      .eq('userId', userId) // ใช้ userId ในการค้นหา
-      .single();
+      .eq('userId', userId); // ใช้ userId ในการค้นหา
 
     if (error) {
       console.error(`[handleUserInfo] ERROR:`, error);
-    } else {
-      console.log(`[handleUserInfo] SUCCESS:`, user);
+      return client.replyMessage(event.replyToken, createErrorFlexMessage('เกิดข้อผิดพลาดในการดึงข้อมูล'));
     }
 
-    if (error || !user) {
+    console.log(`[handleUserInfo] SUCCESS:`, users);
+
+    if (!users || users.length === 0) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
+
+    const user = users[0]; // เอาข้อมูลแรก
     return client.replyMessage(event.replyToken, createUserInfoFlexMessage(user));
   } catch (err) {
     console.error('[handleUserInfo] Exception:', err);
