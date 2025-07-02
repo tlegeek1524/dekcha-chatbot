@@ -2,7 +2,7 @@ const line = require('@line/bot-sdk');
 const { createClient } = require('@supabase/supabase-js');
 
 // ตั้งค่า Supabase
-const supabaseUrl = 'https://supabase.com/dashboard/project/sgncxqqiizwnnffjffok';  // แก้เป็น URL โปรเจกต์คุณ
+const supabaseUrl = 'https://sgncxqqiizwnnffjffok.supabase.co';  // แก้เป็น URL โปรเจกต์คุณ
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnbmN4cXFpaXp3bm5mZmpmZm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0ODIwMDQsImV4cCI6MjA2NzA1ODAwNH0.nQegkuQ1sC5b_8Hr70FbBkm0nulsLPNOGervJe9Su0A'; // แก้เป็น Key ของคุณ
 
 const supabase = createClient(supabaseUrl, supabaseKey);
