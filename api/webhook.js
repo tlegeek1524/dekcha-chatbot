@@ -131,23 +131,34 @@ async function getUserData(userId) {
       .select('*')
       .limit(5);
     console.log(`[getUserData] ข้อมูลใน table 'users' (5 แถวแรก):`, JSON.stringify(allUsers, null, 2));
-    if (getAllError) console.error(`[getUserData] Debug query error:`, getAllError.message, getAllError.details);
+    if (getAllError) {
+      console.error(`[getUserData] Debug query error:`, getAllError.message, getAllError.details);
+    }
   }
 
-  // ค้นหาข้อมูลด้วย userId
+  // ค้นหาข้อมูลด้วย userId โดยไม่ใช้ .single()
   console.log(`[getUserData] Querying table 'users' for userId: "${userId}"`);
-  const { data: user, error } = await supabase
+  const { data: users, error } = await supabase
     .from('users')
     .select('*')
-    .eq('userId', userId.trim())
-    .single();
+    .eq('userId', userId.trim());
 
   if (error) {
     console.error(`[getUserData] Supabase query error for userId "${userId}":`, error.message, error.details);
-    console.log(`[getUserData] ❌ ไม่พบ userId: "${userId}"`);
     return { user: null, found: false };
   }
 
+  if (!users || users.length === 0) {
+    console.log(`[getUserData] ❌ ไม่พบ userId: "${userId}" in table 'users'`);
+    return { user: null, found: false };
+  }
+
+  if (users.length > 1) {
+    console.warn(`[getUserData] ⚠️ Found multiple users for userId: "${userId}"`, JSON.stringify(users, null, 2));
+    // อาจเลือกส่ง user ตัวแรกหรือจัดการตามความเหมาะสม
+  }
+
+  const user = users[0]; // ใช้แถวแรกถ้ามีหลายแถว
   console.log(`[getUserData] ข้อมูลที่ค้นหาได้:`, JSON.stringify(user, null, 2));
   return { user, found: true };
 }
