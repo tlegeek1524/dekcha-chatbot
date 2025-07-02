@@ -56,50 +56,33 @@ module.exports = async (req, res) => {
   }
 };
 
-// ฟังก์ชันจัดการเหตุการณ์
-async function handleEvent(event) {
-  if (event.type !== 'message' || event.message.type !== 'text') {
-    return Promise.resolve(null);
-  }
-
-  const userMessage = event.message.text.trim().toLowerCase();
-  const userId = event.source.userId;
-
-  switch (userMessage) {
-    case 'แต้มคงเหลือ':
-    case 'แต้ม':
-    case 'points':
-      return handlePointBalance(event, userId);
-    case 'ข้อมูลผู้ใช้งาน':
-    case 'ข้อมูลสมาชิก':
-    case 'ข้อมูล':
-    case 'profile':
-      return handleUserInfo(event, userId);
-    case 'เมนู':
-    case 'menu':
-      return client.replyMessage(event.replyToken, createMenuFlexMessage());
-    default:
-      return client.replyMessage(event.replyToken, createHelpFlexMessage());
-  }
-}
-
 // ฟังก์ชันหลักสำหรับดึงข้อมูลผู้ใช้
 async function getUserData(userId) {
-  console.log(`[getUserData] ดึงข้อมูลจาก table 'user' สำหรับ userId: ${userId}`);
+  console.log(`[getUserData] ดึงข้อมูลจาก table 'user'`);
+  console.log(`[getUserData] userId ที่ส่งไป: "${userId}" (type: ${typeof userId})`);
   
+  // ลองดึงข้อมูลทั้งหมดใน table ก่อน (เพื่อดูว่ามีข้อมูลอะไรบ้าง)
+  const { data: allUsers, error: getAllError } = await supabase
+    .from('user')
+    .select('*')
+    .limit(5);
+  
+  console.log(`[getUserData] ข้อมูลใน table 'user' ทั้งหมด (5 แถวแรก):`, allUsers);
+  
+  // ลองดึงข้อมูลที่ตรงกับ userId
   const { data: user, error } = await supabase
     .from('user')
     .select('*')
     .eq('userId', userId)
     .single();
 
-  // แสดงข้อมูลที่ดึงมาแบบ JSON
-  console.log(`[getUserData] ข้อมูลจาก table 'user':`, user);
+  console.log(`[getUserData] ข้อมูลที่ค้นหาได้:`, user);
   console.log(`[getUserData] JSON:`, JSON.stringify(user, null, 2));
 
   if (error) {
     console.log(`[getUserData] Error:`, error);
     if (error.code === 'PGRST116') {
+      console.log(`[getUserData] ❌ ไม่พบ userId: "${userId}" ใน table 'user'`);
       return { user: null, found: false };
     }
     throw error;
