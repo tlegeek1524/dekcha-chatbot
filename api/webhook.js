@@ -87,24 +87,28 @@ async function handleEvent(event) {
 async function handlePointBalance(event, userId) {
   try {
     console.log(`[handlePointBalance] กำลังดึงข้อมูลจาก table 'user' ด้วย userId: ${userId}`);
-    const { data: users, error } = await supabase
-      .from('user') // ใช้ table 'user'
+    
+    // ใช้ .single() เพื่อดึงข้อมูลเพียงแถวเดียว เนื่องจาก userId ควรจะเป็น unique
+    const { data: user, error } = await supabase
+      .from('user')
       .select('*')
-      .eq('userId', userId); // ใช้ userId ในการค้นหา
+      .eq('userId', userId)
+      .single(); // ใช้ single() แทนการดึงมาเป็น array
 
     if (error) {
+      // ตรวจสอบว่าเป็น error แบบไม่พบข้อมูลหรือไม่
+      if (error.code === 'PGRST116') {
+        console.log(`[handlePointBalance] ไม่พบผู้ใช้งาน userId: ${userId}`);
+        return client.replyMessage(event.replyToken, createUserNotFoundMessage());
+      }
+      
       console.error(`[handlePointBalance] ERROR:`, error);
       return client.replyMessage(event.replyToken, createErrorFlexMessage('เกิดข้อผิดพลาดในการดึงข้อมูล'));
     }
 
-    console.log(`[handlePointBalance] SUCCESS:`, users);
-
-    if (!users || users.length === 0) {
-      return client.replyMessage(event.replyToken, createUserNotFoundMessage());
-    }
-
-    const user = users.find(u => u.userId === userId); // หาข้อมูลที่ตรงกับ userId
+    console.log(`[handlePointBalance] SUCCESS: พบข้อมูลผู้ใช้`, user);
     return client.replyMessage(event.replyToken, createPointFlexMessage(user));
+
   } catch (err) {
     console.error('[handlePointBalance] Exception:', err);
     return client.replyMessage(event.replyToken, createErrorFlexMessage('ไม่สามารถดึงข้อมูลแต้มสะสมได้'));
@@ -115,24 +119,84 @@ async function handlePointBalance(event, userId) {
 async function handleUserInfo(event, userId) {
   try {
     console.log(`[handleUserInfo] กำลังดึงข้อมูลจาก table 'user' ด้วย userId: ${userId}`);
-    const { data: users, error } = await supabase
-      .from('user') // ใช้ table 'user'
+    
+    // ใช้ .single() เพื่อดึงข้อมูลเพียงแถวเดียว
+    const { data: user, error } = await supabase
+      .from('user')
       .select('*')
-      .eq('userId', userId); // ใช้ userId ในการค้นหา
+      .eq('userId', userId)
+      .single(); // ใช้ single() แทนการดึงมาเป็น array
 
     if (error) {
+      // ตรวจสอบว่าเป็น error แบบไม่พบข้อมูลหรือไม่
+      if (error.code === 'PGRST116') {
+        console.log(`[handleUserInfo] ไม่พบผู้ใช้งาน userId: ${userId}`);
+        return client.replyMessage(event.replyToken, createUserNotFoundMessage());
+      }
+      
       console.error(`[handleUserInfo] ERROR:`, error);
       return client.replyMessage(event.replyToken, createErrorFlexMessage('เกิดข้อผิดพลาดในการดึงข้อมูล'));
     }
 
-    console.log(`[handleUserInfo] SUCCESS:`, users);
+    console.log(`[handleUserInfo] SUCCESS: พบข้อมูลผู้ใช้`, user);
+    return client.replyMessage(event.replyToken, createUserInfoFlexMessage(user));
 
-    if (!users || users.length === 0) {
+  } catch (err) {
+    console.error('[handleUserInfo] Exception:', err);
+    return client.replyMessage(event.replyToken, createErrorFlexMessage('ไม่สามารถดึงข้อมูลสมาชิกได้'));
+  }
+}
+
+// หรือถ้าต้องการสร้าง function ที่ใช้ร่วมกันเพื่อลด code duplication
+async function getUserData(userId) {
+  const { data: user, error } = await supabase
+    .from('user')
+    .select('*')
+    .eq('userId', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  }
+
+  return { user: error ? null : user, found: !error };
+}
+
+// ใช้ function ร่วม - เวอร์ชั่นที่ปรับปรุงแล้ว
+async function handlePointBalanceV2(event, userId) {
+  try {
+    console.log(`[handlePointBalance] กำลังดึงข้อมูลจาก table 'user' ด้วย userId: ${userId}`);
+    
+    const { user, found } = await getUserData(userId);
+
+    if (!found) {
+      console.log(`[handlePointBalance] ไม่พบผู้ใช้งาน userId: ${userId}`);
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
 
-    const user = users.find(u => u.userId === userId); // หาข้อมูลที่ตรงกับ userId
+    console.log(`[handlePointBalance] SUCCESS: พบข้อมูลผู้ใช้`, user);
+    return client.replyMessage(event.replyToken, createPointFlexMessage(user));
+
+  } catch (err) {
+    console.error('[handlePointBalance] Exception:', err);
+    return client.replyMessage(event.replyToken, createErrorFlexMessage('ไม่สามารถดึงข้อมูลแต้มสะสมได้'));
+  }
+}
+
+async function handleUserInfoV2(event, userId) {
+  try {
+    console.log(`[handleUserInfo] กำลังดึงข้อมูลจาก table 'user' ด้วย userId: ${userId}`);
+    
+    const { user, found } = await getUserData(userId);
+
+    if (!found) {
+      console.log(`[handleUserInfo] ไม่พบผู้ใช้งาน userId: ${userId}`);
+      return client.replyMessage(event.replyToken, createUserNotFoundMessage());
+    }
+
+    console.log(`[handleUserInfo] SUCCESS: พบข้อมูลผู้ใช้`, user);
     return client.replyMessage(event.replyToken, createUserInfoFlexMessage(user));
+
   } catch (err) {
     console.error('[handleUserInfo] Exception:', err);
     return client.replyMessage(event.replyToken, createErrorFlexMessage('ไม่สามารถดึงข้อมูลสมาชิกได้'));
