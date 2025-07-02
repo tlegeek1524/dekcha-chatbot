@@ -92,6 +92,8 @@ async function handlePointBalance(event, userId) {
       .eq('userId', userId)
       .single();
 
+    console.log('handlePointBalance:', { userId, user, error }); // เพิ่ม log
+
     if (error || !user) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
@@ -110,6 +112,8 @@ async function handleUserInfo(event, userId) {
       .select('*')
       .eq('userId', userId)
       .single();
+
+    console.log('handleUserInfo:', { userId, user, error }); // เพิ่ม log
 
     if (error || !user) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
@@ -156,7 +160,7 @@ function createUserNotFoundMessage() {
             action: {
               type: 'uri',
               label: 'ลงทะเบียนสมาชิก',
-              uri: 'https://example.com/register',
+              uri: 'https://dekcha-frontend.vercel.app/',
             },
             style: 'primary',
             color: THEME.PRIMARY,
