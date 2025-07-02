@@ -1,6 +1,8 @@
+const express = require('express');
 const line = require('@line/bot-sdk');
 const { PrismaClient } = require('@prisma/client');
 
+const app = express();
 const prisma = new PrismaClient();
 
 // LINE Bot configuration
@@ -11,21 +13,21 @@ const config = {
 
 const client = new line.Client(config);
 
-// ธีมสีหลัก
+// ตั้งค่าธีมสีหลักสำหรับร้านคาเฟ่
 const THEME = {
-  PRIMARY: '#5D4037',
-  SECONDARY: '#8D6E63',
-  ACCENT: '#FFAB91',
-  BACKGROUND: '#FFF8E1',
-  TEXT_DARK: '#3E2723',
-  TEXT_LIGHT: '#D7CCC8',
-  SUCCESS: '#81C784',
-  ERROR: '#E57373',
-  HEADER_BG: '#4E342E',
-  FOOTER_BG: '#EFEBE9',
+  PRIMARY: '#5D4037',        // น้ำตาลเข้ม (สีหลัก)
+  SECONDARY: '#8D6E63',      // น้ำตาลอ่อน (สีรอง)
+  ACCENT: '#FFAB91',         // สีส้มพีช (สีเน้น)
+  BACKGROUND: '#FFF8E1',     // ครีมอ่อน (พื้นหลัง)
+  TEXT_DARK: '#3E2723',      // สีข้อความเข้ม
+  TEXT_LIGHT: '#D7CCC8',     // สีข้อความอ่อน
+  SUCCESS: '#81C784',        // สีเขียวอ่อน (สำเร็จ)
+  ERROR: '#E57373',          // สีแดงอ่อน (ผิดพลาด)
+  HEADER_BG: '#4E342E',      // สีพื้นหลังส่วนหัว
+  FOOTER_BG: '#EFEBE9',      // สีพื้นหลังส่วนท้าย
 };
 
-// ข้อความทั่วไป
+// ข้อความทั่วไปที่ใช้ในแอป
 const TEXT = {
   WELCOME: '☕ ยินดีต้อนรับสู่ TeaVibes Cafe',
   POINT_BALANCE: '☕ แต้มสะสมของคุณ',
@@ -37,20 +39,15 @@ const TEXT = {
   ERROR_MESSAGE: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้งในภายหลัง',
 };
 
-module.exports = async (req, res) => {
-  if (req.method !== 'POST') {
-    return res.status(405).send('Method Not Allowed');
-  }
-
-  try {
-    const events = req.body.events;
-    const results = await Promise.all(events.map(handleEvent));
-    return res.status(200).json(results);
-  } catch (err) {
-    console.error(err);
-    return res.status(500).send('Internal Server Error');
-  }
-};
+// Webhook endpoint
+app.post('/webhook', line.middleware(config), (req, res) => {
+  Promise.all(req.body.events.map(handleEvent))
+    .then(result => res.json(result))
+    .catch(err => {
+      console.error(err);
+      res.status(500).end();
+    });
+});
 
 // ฟังก์ชันจัดการเหตุการณ์
 async function handleEvent(event) {
@@ -113,7 +110,7 @@ async function handleUserInfo(event, userId) {
   }
 }
 
-// สร้าง Flex Message กรณีไม่พบผู้ใช้
+// สร้าง Flex Message สำหรับกรณีไม่พบข้อมูลผู้ใช้
 function createUserNotFoundMessage() {
   return {
     type: 'flex',
@@ -156,14 +153,18 @@ function createUserNotFoundMessage() {
         ],
       },
       styles: {
-        body: { backgroundColor: THEME.BACKGROUND },
-        footer: { backgroundColor: THEME.FOOTER_BG },
+        body: {
+          backgroundColor: THEME.BACKGROUND,
+        },
+        footer: {
+          backgroundColor: THEME.FOOTER_BG,
+        },
       },
     },
   };
 }
 
-// สร้าง Flex Message แสดงแต้ม
+// สร้าง Flex Message สำหรับแสดงแต้มคงเหลือ (ลบหลอดออก)
 function createPointFlexMessage(user) {
   return {
     type: 'flex',
@@ -219,12 +220,29 @@ function createPointFlexMessage(user) {
             type: 'box',
             layout: 'horizontal',
             contents: [
-              { type: 'text', text: '👤 สมาชิก', size: 'sm', color: THEME.SECONDARY, flex: 1 },
-              { type: 'text', text: `${user.name}`, size: 'sm', color: THEME.TEXT_DARK, align: 'end', flex: 2 },
+              {
+                type: 'text',
+                text: '👤 สมาชิก',
+                size: 'sm',
+                color: THEME.SECONDARY,
+                flex: 1,
+              },
+              {
+                type: 'text',
+                text: `${user.name}`,
+                size: 'sm',
+                color: THEME.TEXT_DARK,
+                align: 'end',
+                flex: 2,
+              },
             ],
             margin: 'md',
           },
-          { type: 'separator', margin: 'lg', color: THEME.TEXT_LIGHT },
+          {
+            type: 'separator',
+            margin: 'lg',
+            color: THEME.TEXT_LIGHT,
+          },
         ],
         paddingAll: '20px',
         backgroundColor: THEME.BACKGROUND,
@@ -235,7 +253,11 @@ function createPointFlexMessage(user) {
         contents: [
           {
             type: 'button',
-            action: { type: 'message', label: 'ดูข้อมูลสมาชิก', text: 'ข้อมูลผู้ใช้งาน' },
+            action: {
+              type: 'message',
+              label: 'ดูข้อมูลสมาชิก',
+              text: 'ข้อมูลผู้ใช้งาน',
+            },
             style: 'primary',
             color: THEME.PRIMARY,
           },
@@ -247,7 +269,6 @@ function createPointFlexMessage(user) {
   };
 }
 
-// สร้าง Flex Message แสดงข้อมูลสมาชิก
 function createUserInfoFlexMessage(user) {
   const memberLevel = getMemberLevel(user.userpoint);
 
@@ -260,7 +281,14 @@ function createUserInfoFlexMessage(user) {
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'text', text: TEXT.USER_INFO, weight: 'bold', color: '#FFFFFF', size: 'xl', align: 'center' },
+          {
+            type: 'text',
+            text: TEXT.USER_INFO,
+            weight: 'bold',
+            color: '#FFFFFF',
+            size: 'xl',
+            align: 'center',
+          },
         ],
         backgroundColor: THEME.HEADER_BG,
         paddingTop: '20px',
@@ -270,8 +298,22 @@ function createUserInfoFlexMessage(user) {
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'text', text: memberLevel.title, size: 'lg', weight: 'bold', align: 'center', color: memberLevel.color },
-          { type: 'text', text: memberLevel.description, size: 'xs', align: 'center', color: THEME.SECONDARY, margin: 'sm' },
+          {
+            type: 'text',
+            text: memberLevel.title,
+            size: 'lg',
+            weight: 'bold',
+            align: 'center',
+            color: memberLevel.color,
+          },
+          {
+            type: 'text',
+            text: memberLevel.description,
+            size: 'xs',
+            align: 'center',
+            color: THEME.SECONDARY,
+            margin: 'sm',
+          },
         ],
         paddingAll: '15px',
         backgroundColor: THEME.BACKGROUND,
@@ -284,28 +326,79 @@ function createUserInfoFlexMessage(user) {
             type: 'box',
             layout: 'horizontal',
             contents: [
-              { type: 'text', text: '👤 ชื่อสมาชิก', weight: 'bold', size: 'sm', color: THEME.SECONDARY, flex: 1 },
-              { type: 'text', text: `${user.name}`, size: 'sm', color: THEME.TEXT_DARK, align: 'end', flex: 2 },
+              {
+                type: 'text',
+                text: '👤 ชื่อสมาชิก',
+                weight: 'bold',
+                size: 'sm',
+                color: THEME.SECONDARY,
+                flex: 1,
+              },
+              {
+                type: 'text',
+                text: `${user.name}`,
+                size: 'sm',
+                color: THEME.TEXT_DARK,
+                align: 'end',
+                flex: 2,
+              },
             ],
             margin: 'md',
           },
-          { type: 'separator', margin: 'lg', color: THEME.TEXT_LIGHT },
+          {
+            type: 'separator',
+            margin: 'lg',
+            color: THEME.TEXT_LIGHT,
+          },
           {
             type: 'box',
             layout: 'horizontal',
             contents: [
-              { type: 'text', text: '🔑 รหัสสมาชิก', weight: 'bold', size: 'sm', color: THEME.SECONDARY, flex: 1 },
-              { type: 'text', text: `${user.uid}`, size: 'sm', color: THEME.TEXT_DARK, align: 'end', flex: 2 },
+              {
+                type: 'text',
+                text: '🔑 รหัสสมาชิก',
+                weight: 'bold',
+                size: 'sm',
+                color: THEME.SECONDARY,
+                flex: 1,
+              },
+              {
+                type: 'text',
+                text: `${user.uid}`,
+                size: 'sm',
+                color: THEME.TEXT_DARK,
+                align: 'end',
+                flex: 2,
+              },
             ],
             margin: 'md',
           },
-          { type: 'separator', margin: 'lg', color: THEME.TEXT_LIGHT },
+          {
+            type: 'separator',
+            margin: 'lg',
+            color: THEME.TEXT_LIGHT,
+          },
           {
             type: 'box',
             layout: 'horizontal',
             contents: [
-              { type: 'text', text: '✨ แต้มสะสม', weight: 'bold', size: 'sm', color: THEME.SECONDARY, flex: 1 },
-              { type: 'text', text: `${user.userpoint} แต้ม`, size: 'sm', color: memberLevel.color, align: 'end', flex: 2, weight: 'bold' },
+              {
+                type: 'text',
+                text: '✨ แต้มสะสม',
+                weight: 'bold',
+                size: 'sm',
+                color: THEME.SECONDARY,
+                flex: 1,
+              },
+              {
+                type: 'text',
+                text: `${user.userpoint} แต้ม`,
+                size: 'sm',
+                color: memberLevel.color,
+                align: 'end',
+                flex: 2,
+                weight: 'bold',
+              },
             ],
             margin: 'md',
           },
@@ -317,8 +410,27 @@ function createUserInfoFlexMessage(user) {
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'button', action: { type: 'message', label: 'ดูแต้มคงเหลือ', text: 'แต้มคงเหลือ' }, style: 'primary', color: THEME.PRIMARY },
-          { type: 'button', action: { type: 'message', label: 'ดูเมนู', text: 'เมนู' }, style: 'secondary', color: THEME.SECONDARY, margin: 'sm' },
+          {
+            type: 'button',
+            action: {
+              type: 'message',
+              label: 'ดูแต้มคงเหลือ',
+              text: 'แต้มคงเหลือ',
+            },
+            style: 'primary',
+            color: THEME.PRIMARY,
+          },
+          {
+            type: 'button',
+            action: {
+              type: 'message',
+              label: 'ดูเมนู',
+              text: 'เมนู',
+            },
+            style: 'secondary',
+            color: THEME.SECONDARY,
+            margin: 'sm',
+          },
         ],
         paddingAll: '15px',
         backgroundColor: THEME.FOOTER_BG,
@@ -329,19 +441,291 @@ function createUserInfoFlexMessage(user) {
 
 // ฟังก์ชันคำนวณระดับสมาชิก
 function getMemberLevel(points) {
-  if (points >= 50) return { title: 'GOLD MEMBER', description: 'สมาชิกระดับทอง', color: '#FFD700' };
-  if (points >= 30) return { title: 'SILVER MEMBER', description: 'สมาชิกระดับเงิน', color: '#C0C0C0' };
-  if (points >= 10) return { title: 'BRONZE MEMBER', description: 'สมาชิกระดับทองแดง', color: '#CD7F32' };
-  return { title: 'MEMBER', description: 'สมาชิกทั่วไป', color: THEME.SECONDARY };
+  if (points >= 50) {
+    return {
+      title: 'GOLD MEMBER',
+      description: 'สมาชิกระดับทอง',
+      color: '#FFD700',
+    };
+  } else if (points >= 30) {
+    return {
+      title: 'SILVER MEMBER',
+      description: 'สมาชิกระดับเงิน',
+      color: '#C0C0C0',
+    };
+  } else if (points >= 10) {
+    return {
+      title: 'BRONZE MEMBER',
+      description: 'สมาชิกระดับทองแดง',
+      color: '#CD7F32',
+    };
+  } else {
+    return {
+      title: 'MEMBER',
+      description: 'สมาชิกทั่วไป',
+      color: THEME.SECONDARY,
+    };
+  }
 }
 
-// สร้าง Flex Message เมนู
-function createMenuFlexMessage() { /* (เหมือนโค้ดเดิมของคุณ) */ }
-
-// สร้าง Flex Message ช่วยเหลือ
-function createHelpFlexMessage() { /* (เหมือนโค้ดเดิมของคุณ) */ }
-
-// สร้าง Flex Message ข้อผิดพลาด
-function createErrorFlexMessage(msg) {
-  return { type: 'text', text: `${TEXT.ERROR_TITLE}: ${msg}` };
+// สร้าง Flex Message สำหรับแสดงเมนู (ลบปุ่มโปรโมชั่น)
+function createMenuFlexMessage() {
+  return {
+    type: 'flex',
+    altText: TEXT.MENU_TITLE,
+    contents: {
+      type: 'carousel',
+      contents: [
+        // เมนูบัตรที่ 1: คำสั่งหลัก
+        {
+          type: 'bubble',
+          header: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: TEXT.MENU_TITLE,
+                weight: 'bold',
+                color: '#FFFFFF',
+                size: 'xl',
+                align: 'center',
+              },
+            ],
+            backgroundColor: THEME.HEADER_BG,
+            paddingTop: '20px',
+            paddingBottom: '20px',
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'button',
+                action: {
+                  type: 'message',
+                  label: '💰 แต้มคงเหลือ',
+                  text: 'แต้มคงเหลือ',
+                },
+                style: 'primary',
+                color: THEME.PRIMARY,
+                margin: 'md',
+              },
+              {
+                type: 'button',
+                action: {
+                  type: 'message',
+                  label: '👤 ข้อมูลสมาชิก',
+                  text: 'ข้อมูลผู้ใช้งาน',
+                },
+                style: 'primary',
+                color: THEME.SECONDARY,
+                margin: 'md',
+              },
+            ],
+            paddingAll: '20px',
+            backgroundColor: THEME.BACKGROUND,
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: 'เลือกเมนูที่ต้องการ',
+                size: 'xs',
+                color: THEME.SECONDARY,
+                align: 'center',
+              },
+            ],
+            backgroundColor: THEME.FOOTER_BG,
+            paddingAll: '10px',
+          },
+        },
+        // เมนูบัตรที่ 2: ความช่วยเหลือ
+        {
+          type: 'bubble',
+          header: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: TEXT.HELP_TITLE,
+                weight: 'bold',
+                color: '#FFFFFF',
+                size: 'xl',
+                align: 'center',
+              },
+            ],
+            backgroundColor: THEME.HEADER_BG,
+            paddingTop: '20px',
+            paddingBottom: '20px',
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: 'วิธีใช้งาน',
+                weight: 'bold',
+                size: 'lg',
+                margin: 'md',
+                color: THEME.PRIMARY,
+              },
+              {
+                type: 'text',
+                text: 'พิมพ์คำสั่งต่อไปนี้เพื่อใช้งาน:',
+                margin: 'md',
+                wrap: true,
+                size: 'sm',
+                color: THEME.TEXT_DARK,
+              },
+              {
+                type: 'text',
+                text: '• "แต้ม" - ดูแต้มสะสมของคุณ',
+                margin: 'sm',
+                wrap: true,
+                size: 'sm',
+                color: THEME.TEXT_DARK,
+              },
+              {
+                type: 'text',
+                text: '• "ข้อมูล" - ดูข้อมูลสมาชิก',
+                margin: 'sm',
+                wrap: true,
+                size: 'sm',
+                color: THEME.TEXT_DARK,
+              },
+              {
+                type: 'text',
+                text: '• "เมนู" - แสดงเมนูคำสั่งทั้งหมด',
+                margin: 'sm',
+                wrap: true,
+                size: 'sm',
+                color: THEME.TEXT_DARK,
+              },
+            ],
+            paddingAll: '20px',
+            backgroundColor: THEME.BACKGROUND,
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'button',
+                action: {
+                  type: 'uri',
+                  label: 'ติดต่อพนักงาน',
+                  uri: 'https://line.me/ti/p/~@teaVibesCafe',
+                },
+                style: 'secondary',
+                color: THEME.PRIMARY,
+              },
+            ],
+            backgroundColor: THEME.FOOTER_BG,
+            paddingAll: '10px',
+          },
+        },
+      ],
+    },
+  };
 }
+
+// สร้าง Flex Message สำหรับความช่วยเหลือ (ลบข้อความ "สะสมครบ")
+function createHelpFlexMessage() {
+  return {
+    type: 'flex',
+    altText: 'ช่วยเหลือการใช้งาน',
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '🤖 วิธีใช้งาน TeaVibes Cafe',
+            weight: 'bold',
+            size: 'lg',
+            color: '#FFFFFF',
+            align: 'center',
+          },
+        ],
+        backgroundColor: THEME.HEADER_BG,
+        paddingTop: '20px',
+        paddingBottom: '20px',
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: 'สวัสดีค่ะ! คุณสามารถใช้คำสั่งต่อไปนี้:',
+            margin: 'md',
+            wrap: true,
+            color: THEME.PRIMARY,
+            weight: 'bold',
+          },
+          {
+            type: 'separator',
+            margin: 'md',
+            color: THEME.TEXT_LIGHT,
+          },
+          {
+            type: 'text',
+            text: '• "แต้ม" - ดูแต้มสะสมของคุณ',
+            margin: 'md',
+            wrap: true,
+            size: 'sm',
+            color: THEME.TEXT_DARK,
+          },
+          {
+            type: 'text',
+            text: '• "ข้อมูล" - ดูข้อมูลสมาชิก',
+            margin: 'sm',
+            wrap: true,
+            size: 'sm',
+            color: THEME.TEXT_DARK,
+          },
+          {
+            type: 'text',
+            text: '• "เมนู" - แสดงเมนูคำสั่งทั้งหมด',
+            margin: 'sm',
+            wrap: true,
+            size: 'sm',
+            color: THEME.TEXT_DARK,
+          },
+        ],
+        paddingAll: '20px',
+        backgroundColor: THEME.BACKGROUND,
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            action: {
+              type: 'message',
+              label: 'แสดงเมนู',
+              text: 'เมนู',
+            },
+            style: 'primary',
+            color: THEME.PRIMARY,
+          },
+        ],
+        paddingAll: '15px',
+        backgroundColor: THEME.FOOTER_BG,
+      },
+    },
+  };
+}
+
+// เริ่มต้นเซิร์ฟเวอร์
+app.listen(3001, () => {
+  console.log('🚀 TeaVibes Cafe LINE Bot กำลังทำงานที่พอร์ต 3001');
+});
