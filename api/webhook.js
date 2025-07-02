@@ -87,17 +87,19 @@ async function handleEvent(event) {
 async function handlePointBalance(event, userId) {
   try {
     const { data: user, error } = await supabase
-      .from('User')
+      .from('user') // ตรวจสอบชื่อ table ให้ถูกต้อง (users)
       .select('*')
       .eq('userId', userId)
       .single();
+
+    console.log('[handlePointBalance] userId:', userId, '| user:', user, '| error:', error);
 
     if (error || !user) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
     return client.replyMessage(event.replyToken, createPointFlexMessage(user));
   } catch (err) {
-    console.error(err);
+    console.error('[handlePointBalance] Exception:', err);
     return client.replyMessage(event.replyToken, createErrorFlexMessage('ไม่สามารถดึงข้อมูลแต้มสะสมได้'));
   }
 }
@@ -106,17 +108,19 @@ async function handlePointBalance(event, userId) {
 async function handleUserInfo(event, userId) {
   try {
     const { data: user, error } = await supabase
-      .from('User')
+      .from('user') // ตรวจสอบชื่อ table ให้ถูกต้อง (users)
       .select('*')
       .eq('userId', userId)
       .single();
+
+    console.log('[handleUserInfo] userId:', userId, '| user:', user, '| error:', error);
 
     if (error || !user) {
       return client.replyMessage(event.replyToken, createUserNotFoundMessage());
     }
     return client.replyMessage(event.replyToken, createUserInfoFlexMessage(user));
   } catch (err) {
-    console.error(err);
+    console.error('[handleUserInfo] Exception:', err);
     return client.replyMessage(event.replyToken, createErrorFlexMessage('ไม่สามารถดึงข้อมูลสมาชิกได้'));
   }
 }
