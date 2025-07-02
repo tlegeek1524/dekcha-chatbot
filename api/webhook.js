@@ -56,6 +56,60 @@ module.exports = async (req, res) => {
   }
 };
 
+// ฟังก์ชันหลักสำหรับจัดการ event จาก LINE
+async function handleEvent(event) {
+  console.log(`[handleEvent] ได้รับ event:`, event);
+  console.log(`[handleEvent] Event type: ${event.type}`);
+  
+  // ตรวจสอบว่าเป็น message event หรือไม่
+  if (event.type !== 'message' || event.message.type !== 'text') {
+    console.log(`[handleEvent] ไม่ใช่ text message event - ข้าม`);
+    return Promise.resolve(null);
+  }
+
+  const userId = event.source.userId;
+  const messageText = event.message.text.trim();
+  
+  console.log(`[handleEvent] User ID: ${userId}`);
+  console.log(`[handleEvent] Message: "${messageText}"`);
+
+  try {
+    // จัดการข้อความตามคำสั่ง
+    switch (messageText.toLowerCase()) {
+      case 'แต้มคงเหลือ':
+      case 'แต้ม':
+      case 'point':
+      case 'points':
+        return await handlePointBalance(event, userId);
+        
+      case 'ข้อมูลผู้ใช้งาน':
+      case 'ข้อมูลสมาชิก':
+      case 'profile':
+      case 'info':
+        return await handleUserInfo(event, userId);
+        
+      case 'เมนู':
+      case 'menu':
+        return await handleMenu(event);
+        
+      case 'ช่วยเหลือ':
+      case 'help':
+        return await handleHelp(event);
+        
+      case 'สวัสดี':
+      case 'hello':
+      case 'hi':
+        return await handleWelcome(event, userId);
+        
+      default:
+        return await handleDefault(event);
+    }
+  } catch (error) {
+    console.error(`[handleEvent] Error processing event:`, error);
+    return client.replyMessage(event.replyToken, createErrorFlexMessage('เกิดข้อผิดพลาดในการประมวลผล'));
+  }
+}
+
 // ฟังก์ชันหลักสำหรับดึงข้อมูลผู้ใช้
 async function getUserData(userId) {
   console.log(`[getUserData] ดึงข้อมูลจาก table 'user'`);
@@ -128,6 +182,163 @@ async function handleUserInfo(event, userId) {
     createUserInfoFlexMessage, 
     'ไม่สามารถดึงข้อมูลสมาชิกได้'
   );
+}
+
+// จัดการเมนู
+async function handleMenu(event) {
+  console.log(`[handleMenu] แสดงเมนู`);
+  return client.replyMessage(event.replyToken, createMenuFlexMessage());
+}
+
+// จัดการช่วยเหลือ
+async function handleHelp(event) {
+  console.log(`[handleHelp] แสดงความช่วยเหลือ`);
+  return client.replyMessage(event.replyToken, createHelpFlexMessage());
+}
+
+// จัดการข้อความต้อนรับ
+async function handleWelcome(event, userId) {
+  console.log(`[handleWelcome] ข้อความต้อนรับ`);
+  
+  try {
+    const { user, found } = await getUserData(userId);
+    
+    if (found) {
+      return client.replyMessage(event.replyToken, createWelcomeMessage(user.name));
+    } else {
+      return client.replyMessage(event.replyToken, createWelcomeMessage());
+    }
+  } catch (error) {
+    console.error(`[handleWelcome] Error:`, error);
+    return client.replyMessage(event.replyToken, createWelcomeMessage());
+  }
+}
+
+// จัดการข้อความที่ไม่รู้จัก
+async function handleDefault(event) {
+  console.log(`[handleDefault] ข้อความที่ไม่รู้จัก`);
+  return client.replyMessage(event.replyToken, createDefaultMessage());
+}
+
+// สร้างข้อความต้อนรับ
+function createWelcomeMessage(userName = null) {
+  const greeting = userName ? `สวัสดี คุณ${userName}!` : 'สวัสดี!';
+  
+  return {
+    type: 'flex',
+    altText: TEXT.WELCOME,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: TEXT.WELCOME,
+            weight: 'bold',
+            color: '#FFFFFF',
+            size: 'xl',
+            align: 'center',
+          },
+        ],
+        backgroundColor: THEME.HEADER_BG,
+        paddingTop: '20px',
+        paddingBottom: '20px',
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: greeting,
+            size: 'lg',
+            weight: 'bold',
+            color: THEME.PRIMARY,
+            align: 'center',
+          },
+          {
+            type: 'text',
+            text: 'ยินดีต้อนรับสู่ระบบสมาชิก ☕',
+            size: 'sm',
+            color: THEME.SECONDARY,
+            align: 'center',
+            margin: 'md',
+          },
+        ],
+        paddingAll: '20px',
+        backgroundColor: THEME.BACKGROUND,
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            action: { type: 'message', label: 'ดูแต้มคงเหลือ', text: 'แต้มคงเหลือ' },
+            style: 'primary',
+            color: THEME.PRIMARY,
+          },
+          {
+            type: 'button',
+            action: { type: 'message', label: 'ดูข้อมูลสมาชิก', text: 'ข้อมูลสมาชิก' },
+            style: 'secondary',
+            color: THEME.SECONDARY,
+            margin: 'sm',
+          },
+        ],
+        paddingAll: '15px',
+        backgroundColor: THEME.FOOTER_BG,
+      },
+    },
+  };
+}
+
+// สร้างข้อความเริ่มต้น
+function createDefaultMessage() {
+  return {
+    type: 'flex',
+    altText: 'ไม่เข้าใจคำสั่ง',
+    contents: {
+      type: 'bubble',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '🤖 ไม่เข้าใจคำสั่ง',
+            weight: 'bold',
+            size: 'lg',
+            color: THEME.PRIMARY,
+          },
+          {
+            type: 'text',
+            text: 'ลองพิมพ์ "ช่วยเหลือ" เพื่อดูคำสั่งที่ใช้ได้',
+            margin: 'md',
+            wrap: true,
+          },
+        ],
+        paddingAll: '20px',
+        backgroundColor: THEME.BACKGROUND,
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            action: { type: 'message', label: 'ช่วยเหลือ', text: 'ช่วยเหลือ' },
+            style: 'primary',
+            color: THEME.PRIMARY,
+          },
+        ],
+        paddingAll: '15px',
+        backgroundColor: THEME.FOOTER_BG,
+      },
+    },
+  };
 }
 
 // สร้าง Flex Message กรณีไม่พบผู้ใช้
@@ -354,7 +565,6 @@ function getMemberLevel(points) {
 
 // สร้าง Flex Message เมนู
 function createMenuFlexMessage() {
-  // ตัวอย่างเมนู (ปรับตามต้องการ)
   return {
     type: 'flex',
     altText: TEXT.MENU_TITLE,
@@ -374,10 +584,31 @@ function createMenuFlexMessage() {
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'text', text: '1. กาแฟ\n2. ชา\n3. ขนมหวาน', wrap: true }
+          { 
+            type: 'text', 
+            text: '☕ กาแฟ\n🍵 ชา\n🧁 ขนมหวาน\n🥪 ขนมปัง', 
+            wrap: true,
+            size: 'md',
+            color: THEME.TEXT_DARK
+          }
         ],
         paddingAll: '20px',
-      }
+        backgroundColor: THEME.BACKGROUND,
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            action: { type: 'message', label: 'สั่งสินค้า', text: 'สั่งสินค้า' },
+            style: 'primary',
+            color: THEME.PRIMARY,
+          },
+        ],
+        paddingAll: '15px',
+        backgroundColor: THEME.FOOTER_BG,
+      },
     }
   };
 }
@@ -403,10 +634,31 @@ function createHelpFlexMessage() {
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'text', text: 'พิมพ์ "แต้มคงเหลือ" เพื่อดูแต้มสะสม\nพิมพ์ "ข้อมูลสมาชิก" เพื่อดูข้อมูลผู้ใช้งาน\nพิมพ์ "เมนู" เพื่อดูเมนูสินค้า', wrap: true }
+          {
+            type: 'text',
+            text: '📝 คำสั่งที่ใช้ได้:\n\n• "แต้มคงเหลือ" - ดูแต้มสะสม\n• "ข้อมูลสมาชิก" - ดูข้อมูลผู้ใช้งาน\n• "เมนู" - ดูเมนูสินค้า\n• "สวัสดี" - ข้อความต้อนรับ',
+            wrap: true,
+            size: 'sm',
+            color: THEME.TEXT_DARK
+          }
         ],
         paddingAll: '20px',
-      }
+        backgroundColor: THEME.BACKGROUND,
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            action: { type: 'message', label: 'ดูแต้มคงเหลือ', text: 'แต้มคงเหลือ' },
+            style: 'primary',
+            color: THEME.PRIMARY,
+          },
+        ],
+        paddingAll: '15px',
+        backgroundColor: THEME.FOOTER_BG,
+      },
     }
   };
 }
@@ -425,6 +677,7 @@ function createErrorFlexMessage(msg) {
           { type: 'text', text: TEXT.ERROR_TITLE, weight: 'bold', size: 'xl', color: THEME.ERROR },
           { type: 'text', text: msg || TEXT.ERROR_MESSAGE, margin: 'md', wrap: true },
         ],
+        paddingAll: '20px',
       },
       styles: {
         body: { backgroundColor: THEME.BACKGROUND },
