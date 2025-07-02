@@ -110,36 +110,38 @@ async function handleEvent(event) {
   }
 }
 
-// ฟังก์ชันหลักสำหรับดึงข้อมูลผู้ใช้
 async function getUserData(userId) {
-  console.log(`[getUserData] ดึงข้อมูลจาก table 'user'`);
-  console.log(`[getUserData] userId ที่ส่งไป: "${userId}" (type: ${typeof userId})`);
-  
-  // ลองดึงข้อมูลทั้งหมดใน table ก่อน (เพื่อดูว่ามีข้อมูลอะไรบ้าง)
-  const { data: allUsers, error: getAllError } = await supabase
-    .from('users')
-    .select('*')
-    .limit(5);
+  console.log(`[getUserData] ดึงข้อมูลจาก table 'users'`);
+  console.log(`[getUserData] userId: "${userId}" (type: ${typeof userId})`);
 
-  console.log(`[getUserData] ข้อมูลใน table 'users' ทั้งหมด (5 แถวแรก):`, allUsers);
+  // Validate userId
+  if (!userId || typeof userId !== 'string') {
+    console.error(`[getUserData] Invalid userId: "${userId}"`);
+    throw new Error('Invalid userId');
+  }
 
-  // ลองดึงข้อมูลที่ตรงกับ userId
+  // Debug mode: ดึงข้อมูล 5 แถวแรกถ้าเปิด debug
+  if (process.env.DEBUG_MODE === 'true') {
+    const { data: allUsers, error: getAllError } = await supabase
+      .from('users')
+      .select('*')
+      .limit(5);
+    console.log(`[getUserData] ข้อมูลใน table 'users' (5 แถวแรก):`, allUsers);
+    if (getAllError) console.error(`[getUserData] Debug query error:`, getAllError);
+  }
+
+  // ค้นหาข้อมูลด้วย userId
   const { data: user, error } = await supabase
     .from('users')
     .select('*')
-    .eq('userId', userId)
+    .eq('userId', userId.trim()) // ป้องกัน whitespace
     .single();
 
   console.log(`[getUserData] ข้อมูลที่ค้นหาได้:`, user);
-  console.log(`[getUserData] JSON:`, JSON.stringify(user, null, 2));
 
-  if (error) {
-    console.log(`[getUserData] Error:`, error);
-    if (error.code === 'PGRST116') {
-      console.log(`[getUserData] ❌ ไม่พบ userId: "${userId}" ใน table 'user'`);
-      return { user: null, found: false };
-    }
-    throw error;
+  if (error || !user) {
+    console.log(`[getUserData] ❌ ไม่พบ userId: "${userId}"`);
+    return { user: null, found: false };
   }
 
   return { user, found: true };
