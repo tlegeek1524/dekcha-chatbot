@@ -115,11 +115,11 @@ async function handleEvent(event) {
 
 async function getUserData(userId) {
   console.log(`[getUserData] ดึงข้อมูลจาก table 'users'`);
-  console.log(`[getUserData] userId: "${userId}" (type: ${typeof userId})`);
+  console.log(`[getUserData] userId: '${userId}' (type: ${typeof userId})`);
 
   // Validate userId
   if (!userId || typeof userId !== 'string') {
-    console.error(`[getUserData] Invalid userId: "${userId}"`);
+    console.error(`[getUserData] Invalid userId: '${userId}'`);
     throw new Error('Invalid userId');
   }
 
@@ -137,24 +137,24 @@ async function getUserData(userId) {
   }
 
   // ค้นหาข้อมูลด้วย userId โดยไม่ใช้ .single()
-  console.log(`[getUserData] Querying table 'users' for userId: "${userId}"`);
+  console.log(`[getUserData] Querying table 'users' for userId: '${userId}'`);
   const { data: users, error } = await supabase
     .from('users')
     .select('*')
     .eq('userId', userId.trim());
 
   if (error) {
-    console.error(`[getUserData] Supabase query error for userId "${userId}":`, error.message, error.details);
+    console.error(`[getUserData] Supabase query error for userId '${userId}':`, error.message, error.details);
     return { user: null, found: false };
   }
 
   if (!users || users.length === 0) {
-    console.log(`[getUserData] ❌ ไม่พบ userId: "${userId}" in table 'users'`);
+    console.log(`[getUserData] ❌ ไม่พบ userId: '${userId}' in table 'users'`);
     return { user: null, found: false };
   }
 
   if (users.length > 1) {
-    console.warn(`[getUserData] ⚠️ Found multiple users for userId: "${userId}"`, JSON.stringify(users, null, 2));
+    console.warn(`[getUserData] ⚠️ Found multiple users for userId: '${userId}'`, JSON.stringify(users, null, 2));
     // อาจเลือกส่ง user ตัวแรกหรือจัดการตามความเหมาะสม
   }
 
