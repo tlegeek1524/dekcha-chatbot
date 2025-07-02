@@ -2,7 +2,7 @@ const line = require('@line/bot-sdk');
 import { createClient } from '@supabase/supabase-js'
 
 // ตั้งค่า Supabase
-const supabaseUrl = 'https://sgncxqqiizwnnffjffok.supabase.co'
+const supabaseUrl = 'https://mhpetiaaadwsvrtbkmue.supabase.co'
 const supabaseKey = process.env.SUPABASE_KEY
 
 const supabase = createClient(supabaseUrl, supabaseKey);
