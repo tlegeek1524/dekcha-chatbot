@@ -139,7 +139,18 @@ function createPointFlexMessage(user) {
           { type: 'separator', margin: 'lg', color: THEME.TEXT_LIGHT }
         ], paddingAll: '20px', backgroundColor: THEME.BACKGROUND
       },
-      footer: flexFooter([btn('ดูข้อมูลสมาชิก', 'ข้อมูลผู้ใช้งาน', 'primary')])
+      footer: flexFooter([
+        {
+          type: 'button',
+          action: {
+            type: 'uri',
+            label: 'แลกสิทธิพิเศษ',
+            uri: 'https://dekcha-frontend.vercel.app/' // เปลี่ยนลิงก์นี้เป็นลิงก์ที่ต้องการ
+          },
+          style: 'primary',
+          color: THEME.PRIMARY
+        }
+      ])
     }
   };
 }
