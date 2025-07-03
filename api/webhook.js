@@ -12,8 +12,8 @@ console.log('[Supabase] Connection initialized successfully');
 
 // LINE Bot configuration
 const config = {
-  channelAccessToken: 'REG0CAijX1esVbPqu1wlpUkKeFP739y86ZFzDk2QDKGP1v2HfGKdKnBBzNNdMcdkjufRQOQEhLQl9zeotJboR8WjtCOOrIkWAlxTa3U946Z19XemRyjymvs36n0Ee7ZtOpe+nwycCC4QNngADupCRgdB04t89/1O/w1cDnyilFU=',
-  channelSecret: 'de016ec05f8d96c9d92e46a86bd805c8'
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_CHANNEL_SECRET
 };
 
 const client = new line.Client(config);
@@ -60,6 +60,9 @@ module.exports = async (req, res) => {
 };
 
 // ฟังก์ชันหลักสำหรับจัดการ event จาก LINE
+// ประกาศ userid ไว้ข้างนอกเพื่อให้ใช้งานได้ภายนอกฟังก์ชัน
+let getUserId = null;
+
 async function handleEvent(event) {
   console.log(`[handleEvent] ได้รับ event:`, event);
   console.log(`[handleEvent] Event type: ${event.type}`);
@@ -71,6 +74,7 @@ async function handleEvent(event) {
   }
 
   const userid = event.source.userId;
+  getUserId = userid; // เก็บ userid ไว้ที่ตัวแปรภายนอก
   const messageText = event.message.text.trim();
   
   console.log(`[handleEvent] User ID: ${userid}`);
@@ -113,6 +117,8 @@ async function handleEvent(event) {
   }
 }
 
+// สามารถนำ lastUserId ไปใช้งานข้างนอกได้
+
 async function getUserData(userid) {
   console.log(`[getUserData] ดึงข้อมูลจาก table 'users'`);
   console.log(`[getUserData] userid: '${userid}' (type: ${typeof userid})`);
@@ -138,10 +144,10 @@ async function getUserData(userid) {
 
   // ค้นหาข้อมูลด้วย userid โดยไม่ใช้ .single()
   console.log(`[getUserData] Querying table 'users' for userid: '${userid}'`);
-const { data: users, error } = await supabase
+  const { data: users, error } = await supabase
   .from('users')
   .select('*')
-  .eq('userid', userid.trim());
+  .eq('userid', lastUserId);
 
 // เพิ่มการ log เพื่อดูค่า users และ error
 console.log('[getUserData] ผลลัพธ์จาก Supabase:', { users, error });
