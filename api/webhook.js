@@ -12,8 +12,8 @@ console.log('[Supabase] Connection initialized successfully');
 
 // LINE Bot configuration
 const config = {
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.LINE_CHANNEL_SECRET
+  channelAccessToken : 'SxsAFfK/FAxY0kjcJjaSFjhyN0GZIG7JR9MeTjh0u1FysDLjQW4jq+v5tjUcxZQgjufRQOQEhLQl9zeotJboR8WjtCOOrIkWAlxTa3U946YVAx/PFUW/7fSdYfN1+TCGXIGZRRJuKgq6nGuVay5lFgdB04t89/1O/w1cDnyilFU=',
+  channelSecret: 'de016ec05f8d96c9d92e46a86bd805c8'
 };
 
 // Validate LINE configuration
