@@ -1,9 +1,9 @@
 const line = require('@line/bot-sdk');
-import { createClient } from '@supabase/supabase-js'
+const { createClient } = require('@supabase/supabase-js');
 
 // ตั้งค่า Supabase
-const supabaseUrl = 'https://mhpetiaaadwsvrtbkmue.supabase.co'
-const supabaseKey = process.env.SUPABASE_KEY
+const supabaseUrl = 'https://mhpetiaaadwsvrtbkmue.supabase.co';
+const supabaseKey = process.env.SUPABASE_KEY;
 
 // Log การเชื่อมต่อ Supabase
 console.log('[Supabase] Initializing connection with URL:', supabaseUrl);
@@ -15,6 +15,20 @@ const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.LINE_CHANNEL_SECRET
 };
+
+// Validate LINE configuration
+if (!config.channelAccessToken || !config.channelSecret) {
+  console.error('[Config] Missing LINE configuration:', {
+    channelAccessToken: !!config.channelAccessToken,
+    channelSecret: !!config.channelSecret
+  });
+  throw new Error('LINE configuration is incomplete. Please set LINE_CHANNEL_ACCESS_TOKEN and LINE_CHANNEL_SECRET.');
+}
+
+console.log('[Config] LINE configuration loaded successfully:', {
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN ? 'Set' : 'Not set',
+  channelSecret: process.env.LINE_CHANNEL_SECRET ? 'Set' : 'Not set'
+});
 
 const client = new line.Client(config);
 
@@ -60,76 +74,68 @@ module.exports = async (req, res) => {
 };
 
 // ฟังก์ชันหลักสำหรับจัดการ event จาก LINE
-// ประกาศ userid ไว้ข้างนอกเพื่อให้ใช้งานได้ภายนอกฟังก์ชัน
 let getUserId = null;
 
 async function handleEvent(event) {
   console.log(`[handleEvent] ได้รับ event:`, event);
   console.log(`[handleEvent] Event type: ${event.type}`);
   
-  // ตรวจสอบว่าเป็น message event หรือไม่
   if (event.type !== 'message' || event.message.type !== 'text') {
     console.log(`[handleEvent] ไม่ใช่ text message event - ข้าม`);
     return Promise.resolve(null);
   }
 
   const userid = event.source.userId;
-  getUserId = userid; // เก็บ userid ไว้ที่ตัวแปรภายนอก
+  getUserId = userid;
   const messageText = event.message.text.trim();
   
   console.log(`[handleEvent] User ID: ${userid}`);
   console.log(`[handleEvent] Message: "${messageText}"`);
 
   try {
-    // จัดการข้อความตามคำสั่ง
     switch (messageText.toLowerCase()) {
       case 'แต้มคงเหลือ':
       case 'แต้ม':
       case 'point':
       case 'points':
         return await handlePointBalance(event, userid);
-        
       case 'ข้อมูลผู้ใช้งาน':
       case 'ข้อมูลสมาชิก':
       case 'profile':
       case 'info':
         return await handleUserInfo(event, userid);
-        
       case 'เมนู':
       case 'menu':
         return await handleMenu(event);
-        
       case 'ช่วยเหลือ':
       case 'help':
         return await handleHelp(event);
-        
       case 'สวัสดี':
       case 'hello':
       case 'hi':
         return await handleWelcome(event, userid);
-        
       default:
         return await handleDefault(event);
     }
   } catch (error) {
     console.error(`[handleEvent] Error processing event:`, error);
+    if (error.statusCode === 401) {
+      console.error('[handleEvent] Authentication error: Invalid or expired LINE channel access token');
+      return Promise.resolve(null); // Avoid sending reply to prevent further 401 errors
+    }
     return client.replyMessage(event.replyToken, createErrorFlexMessage('เกิดข้อผิดพลาดในการประมวลผล'));
   }
 }
-
-// สามารถนำ lastUserId ไปใช้งานข้างนอกได้
 
 async function getUserData(userid) {
   console.log(`[getUserData] ดึงข้อมูลจาก table 'users'`);
   console.log(`[getUserData] userid: '${userid}' (type: ${typeof userid})`);
 
-  // Validate userid
   if (!userid || typeof userid !== 'string') {
     console.error(`[getUserData] Invalid userid: '${userid}'`);
     throw new Error('Invalid userid');
   }
 
-  // Debug mode: ดึงข้อมูล 5 แถวแรกถ้าเปิด debug
   if (process.env.DEBUG_MODE === 'true') {
     console.log('[getUserData] Debug mode enabled, fetching first 5 rows from users table');
     const { data: allUsers, error: getAllError } = await supabase
@@ -142,36 +148,33 @@ async function getUserData(userid) {
     }
   }
 
-  // ค้นหาข้อมูลด้วย userid โดยไม่ใช้ .single()
   console.log(`[getUserData] Querying table 'users' for userid: '${userid}'`);
   const { data: users, error } = await supabase
-  .from('users')
-  .select('*')
-  .eq('userid', getUserId);
+    .from('users')
+    .select('*')
+    .eq('userid', userid);
 
-// เพิ่มการ log เพื่อดูค่า users และ error
-console.log('[getUserData] ผลลัพธ์จาก Supabase:', { users, error });
+  console.log('[getUserData] ผลลัพธ์จาก Supabase:', { users, error });
 
-if (error) {
-  console.error(`[getUserData] Supabase query error for userid '${userid}':`, error.message, error.details);
-  return { user: null, found: false };
+  if (error) {
+    console.error(`[getUserData] Supabase query error for userid '${userid}':`, error.message, error.details);
+    return { user: null, found: false };
+  }
+
+  if (!users || users.length === 0) {
+    console.log(`[getUserData] ❌ ไม่พบ userid: '${userid}' in table 'users'`);
+    return { user: null, found: false };
+  }
+
+  if (users.length > 1) {
+    console.warn(`[getUserData] ⚠️ Found multiple users for userid: '${userid}'`, JSON.stringify(users, null, 2));
+  }
+
+  const user = users[0];
+  console.log(`[getUserData] ข้อมูลที่ค้นหาได้:`, JSON.stringify(user, null, 2));
+  return { user, found: true };
 }
 
-if (!users || users.length === 0) {
-  console.log(`[getUserData] ❌ ไม่พบ userid: '${userid}' in table 'users'`);
-  return { user: null, found: false };
-}
-
-if (users.length > 1) {
-  console.warn(`[getUserData] ⚠️ Found multiple users for userid: '${userid}'`, JSON.stringify(users, null, 2));
-}
-
-const user = users[0]; // ใช้แถวแรกถ้ามีหลายแถว
-console.log(`[getUserData] ข้อมูลที่ค้นหาได้:`, JSON.stringify(user, null, 2));
-return { user, found: true };
-}
-
-// ฟังก์ชันสำหรับจัดการการตอบกลับ
 async function handleUserResponse(event, userid, messageCreator, errorMsg) {
   try {
     const { user, found } = await getUserData(userid);
@@ -182,48 +185,46 @@ async function handleUserResponse(event, userid, messageCreator, errorMsg) {
     }
 
     return client.replyMessage(event.replyToken, messageCreator(user));
-
   } catch (error) {
     console.error(`[handleUserResponse] Exception for userid "${userid}":`, error.message, error.stack);
+    if (error.statusCode === 401) {
+      console.error('[handleUserResponse] Authentication error: Invalid or expired LINE channel access token');
+      return Promise.resolve(null);
+    }
     return client.replyMessage(event.replyToken, createErrorFlexMessage(errorMsg));
   }
 }
 
-// ดึงแต้มคงเหลือ - เวอร์ชันย่อ
 async function handlePointBalance(event, userid) {
   console.log(`[handlePointBalance] เริ่มกระบวนการดึงแต้มสะสมสำหรับ userid: "${userid}"`);
   return handleUserResponse(
-    event, 
-    userid, 
-    createPointFlexMessage, 
+    event,
+    userid,
+    createPointFlexMessage,
     'ไม่สามารถดึงข้อมูลแต้มสะสมได้'
   );
 }
 
-// ดึงข้อมูลผู้ใช้งาน - เวอร์ชันย่อ
 async function handleUserInfo(event, userid) {
   console.log(`[handleUserInfo] เริ่มกระบวนการดึงข้อมูลสมาชิกสำหรับ userid: '${userid}'`);
   return handleUserResponse(
-    event, 
-    userid, 
-    createUserInfoFlexMessage, 
+    event,
+    userid,
+    createUserInfoFlexMessage,
     'ไม่สามารถดึงข้อมูลสมาชิกได้'
   );
 }
 
-// จัดการเมนู
 async function handleMenu(event) {
   console.log(`[handleMenu] แสดงเมนู`);
   return client.replyMessage(event.replyToken, createMenuFlexMessage());
 }
 
-// จัดการช่วยเหลือ
 async function handleHelp(event) {
   console.log(`[handleHelp] แสดงความช่วยเหลือ`);
   return client.replyMessage(event.replyToken, createHelpFlexMessage());
 }
 
-// จัดการข้อความต้อนรับ
 async function handleWelcome(event, userid) {
   console.log(`[handleWelcome] ข้อความต้อนรับสำหรับ userid: "${userid}"`);
   
@@ -239,17 +240,19 @@ async function handleWelcome(event, userid) {
     }
   } catch (error) {
     console.error(`[handleWelcome] Error for userid "${userid}":`, error.message, error.stack);
+    if (error.statusCode === 401) {
+      console.error('[handleWelcome] Authentication error: Invalid or expired LINE channel access token');
+      return Promise.resolve(null);
+    }
     return client.replyMessage(event.replyToken, createWelcomeMessage());
   }
 }
 
-// จัดการข้อความที่ไม่รู้จัก
 async function handleDefault(event) {
   console.log(`[handleDefault] ข้อความที่ไม่รู้จัก`);
   return client.replyMessage(event.replyToken, createDefaultMessage());
 }
 
-// สร้างข้อความต้อนรับ
 function createWelcomeMessage(userName = null) {
   const greeting = userName ? `สวัสดี คุณ${userName}!` : 'สวัสดี!';
   
@@ -324,7 +327,6 @@ function createWelcomeMessage(userName = null) {
   };
 }
 
-// สร้างข้อความเริ่มต้น
 function createDefaultMessage() {
   return {
     type: 'flex',
@@ -370,7 +372,6 @@ function createDefaultMessage() {
   };
 }
 
-// สร้าง Flex Message กรณีไม่พบผู้ใช้
 function createUserNotFoundMessage() {
   return {
     type: 'flex',
@@ -420,7 +421,6 @@ function createUserNotFoundMessage() {
   };
 }
 
-// สร้าง Flex Message แสดงแต้ม
 function createPointFlexMessage(user) {
   return {
     type: 'flex',
@@ -504,7 +504,6 @@ function createPointFlexMessage(user) {
   };
 }
 
-// สร้าง Flex Message แสดงข้อมูลสมาชิก
 function createUserInfoFlexMessage(user) {
   const memberLevel = getMemberLevel(user.userpoint);
 
@@ -584,7 +583,6 @@ function createUserInfoFlexMessage(user) {
   };
 }
 
-// ฟังก์ชันคำนวณระดับสมาชิก
 function getMemberLevel(points) {
   if (points >= 50) return { title: 'GOLD MEMBER', description: 'สมาชิกระดับทอง', color: '#FFD700' };
   if (points >= 30) return { title: 'SILVER MEMBER', description: 'สมาชิกระดับเงิน', color: '#C0C0C0' };
@@ -592,7 +590,6 @@ function getMemberLevel(points) {
   return { title: 'MEMBER', description: 'สมาชิกทั่วไป', color: THEME.SECONDARY };
 }
 
-// สร้าง Flex Message เมนู
 function createMenuFlexMessage() {
   return {
     type: 'flex',
@@ -600,8 +597,6 @@ function createMenuFlexMessage() {
     contents: {
       type: 'bubble',
       header: {
-       
-
         type: 'box',
         layout: 'vertical',
         contents: [
@@ -644,7 +639,6 @@ function createMenuFlexMessage() {
   };
 }
 
-// สร้าง Flex Message ช่วยเหลือ
 function createHelpFlexMessage() {
   return {
     type: 'flex',
@@ -694,7 +688,6 @@ function createHelpFlexMessage() {
   };
 }
 
-// สร้าง Flex Message แสดงข้อความผิดพลาด
 function createErrorFlexMessage(msg) {
   return {
     type: 'flex',
