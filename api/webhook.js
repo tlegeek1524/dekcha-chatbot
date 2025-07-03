@@ -147,7 +147,7 @@ async function getUserData(userid) {
   const { data: users, error } = await supabase
   .from('users')
   .select('*')
-  .eq('userid', lastUserId);
+  .eq('userid', getUserId);
 
 // เพิ่มการ log เพื่อดูค่า users และ error
 console.log('[getUserData] ผลลัพธ์จาก Supabase:', { users, error });
