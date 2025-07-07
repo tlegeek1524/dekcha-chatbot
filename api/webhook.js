@@ -66,7 +66,7 @@ async function handleEvent(event) {
 // --- UTILITIES ---
 async function getUserData(userId) {
   if (!userId) return { user: null, found: false };
-  const { data, error } = await supabase.from('users').select('*').eq('userid', userId);
+  const { data, error } = await supabase.from('user').select('*').eq('userid', userId);
   if (error || !data || !data.length) return { user: null, found: false };
   return { user: data[0], found: true };
 }
