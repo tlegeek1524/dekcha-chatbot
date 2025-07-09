@@ -45,6 +45,7 @@ module.exports = async (req, res) => {
 async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') return null;
   const { userId } = event.source;
+  console.log(`[Event] Received message from user ${userId}: ${event.message.text}`);
   const text = event.message.text.trim().toLowerCase();
 
   switch (text) {
@@ -258,3 +259,4 @@ function getMemberLevel(points) {
   if (points >= 10) return { title: 'BRONZE MEMBER', description: 'สมาชิกระดับทองแดง', color: '#CD7F32' };
   return { title: 'MEMBER', description: 'สมาชิกทั่วไป', color: THEME.SECONDARY };
 }
+
