@@ -66,21 +66,9 @@ async function handleEvent(event) {
 // --- UTILITIES ---
 async function getUserData(userId) {
   if (!userId) return { user: null, found: false };
-
-  const { data, error } = await supabase
-    .from('user')
-    .select('*')
-    .eq('userid', userId);
-
-  if (error || !data || !data.length) {
-    console.log('[getUserData] No user found or error:', error);
-    return { user: null, found: false };
-  }
-
-  const user = data[0];
-  console.log('[getUserData] User found:', user);
-
-  return { user, found: true };
+  const { data, error } = await supabase.from("user").select('*').eq('userid', userId);
+  if (error || !data || !data.length) return { user: null, found: false };
+  return { user: data[0], found: true };
 }
 
 async function handleUserReply(event, userId, messageFn, errorMsg) {
