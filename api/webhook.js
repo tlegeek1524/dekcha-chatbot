@@ -46,7 +46,7 @@ async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') return null;
   const { userId } = event.source;
   const text = event.message.text.trim().toLowerCase();
-
+  
   switch (text) {
     case 'แต้มคงเหลือ': case 'แต้ม': case 'point': case 'points':
       return handleUserReply(event, userId, createPointFlexMessage, 'ไม่สามารถดึงข้อมูลแต้มสะสมได้');
@@ -65,11 +65,40 @@ async function handleEvent(event) {
 
 // --- UTILITIES ---
 async function getUserData(userId) {
-  if (!userId) return { user: null, found: false };
-  const { data, error } = await supabase.from("user").select('*').eq('userid', userId);
-  if (error || !data || !data.length) return { user: null, found: false };
-  return { user: data[0], found: true };
+  console.log("getUserData called with userId:", userId);
+
+  if (!userId) {
+    console.warn("No userId provided");
+    return { user: null, found: false };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("user")
+      .select('*')
+      .eq('userid', userId);
+
+    console.log("Supabase response:", { data, error });
+
+    if (error) {
+      console.error("Error fetching user data:", error.message);
+      return { user: null, found: false };
+    }
+
+    if (!data || data.length === 0) {
+      console.info("No user found with given userId:", userId);
+      return { user: null, found: false };
+    }
+
+    console.log("User found:", data[0]);
+    return { user: data[0], found: true };
+
+  } catch (e) {
+    console.error("Unexpected error in getUserData:", e);
+    return { user: null, found: false };
+  }
 }
+
 
 async function handleUserReply(event, userId, messageFn, errorMsg) {
   try {
