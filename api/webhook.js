@@ -12,19 +12,29 @@ const supabase = createClient(
 );
 const client = new line.Client(config);
 
-// --- THEME & TEXT ---
+// --- MODERN CAFE THEME ---
 const THEME = {
-  PRIMARY: '#5D4037', SECONDARY: '#8D6E63', ACCENT: '#FFAB91',
-  BACKGROUND: '#FFF8E1', TEXT_DARK: '#3E2723', TEXT_LIGHT: '#D7CCC8',
-  SUCCESS: '#81C784', ERROR: '#E57373', HEADER_BG: '#4E342E', FOOTER_BG: '#EFEBE9'
+  PRIMARY: '#8B4513',      // Rich brown - เหมือนเมล็ดกาแฟ
+  SECONDARY: '#D2691E',    // Orange brown - อบอุ่น
+  ACCENT: '#F5DEB3',       // Wheat - ครีมนวล
+  BACKGROUND: '#FFFEF7',   // Off white - สีพื้นหลังนุ่มนวล
+  SURFACE: '#F8F6F0',      // Light beige - พื้นผิวการ์ด
+  TEXT_PRIMARY: '#2D1B17', // Dark brown - ข้อความหลัก
+  TEXT_SECONDARY: '#8B7355', // Medium brown - ข้อความรอง
+  SUCCESS: '#228B22',      // Forest green - สีเขียวธรรมชาติ
+  WARNING: '#FF8C00',      // Orange - สีเตือน
+  ERROR: '#CD5C5C',        // Indian red - สีแดงนุ่ม
+  GRADIENT_START: '#8B4513',
+  GRADIENT_END: '#D2691E'
 };
+
 const TEXT = {
-  WELCOME: '☕ ยินดีต้อนรับสู่ TeaVibes Cafe',
-  POINT_BALANCE: '☕ แต้มสะสมของคุณ',
-  USER_INFO: '☕ ข้อมูลสมาชิก',
-  MENU_TITLE: '☕ เมนูหลัก',
-  HELP_TITLE: '☕ ช่วยเหลือ',
-  ERROR_TITLE: '⚠️ พบข้อผิดพลาด',
+  WELCOME: 'ยินดีต้อนรับสู่ TeaVibes Cafe',
+  POINT_BALANCE: 'แต้มสะสมของคุณ',
+  USER_INFO: 'ข้อมูลสมาชิก',
+  MENU_TITLE: 'เมนูหลัก',
+  HELP_TITLE: 'ช่วยเหลือ',
+  ERROR_TITLE: 'พบข้อผิดพลาด',
   USER_NOT_FOUND: 'ไม่พบข้อมูลสมาชิก กรุณาลงทะเบียนก่อนใช้งาน',
   ERROR_MESSAGE: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้งในภายหลัง',
 };
@@ -99,7 +109,6 @@ async function getUserData(userId) {
   }
 }
 
-
 async function handleUserReply(event, userId, messageFn, errorMsg) {
   try {
     const { user, found } = await getUserData(userId);
@@ -118,35 +127,69 @@ function reply(event, message) {
   return client.replyMessage(event.replyToken, message);
 }
 
-// --- FLEX MESSAGE GENERATORS ---
+// --- MODERN FLEX MESSAGE GENERATORS ---
 function createWelcomeMessage(name) {
-  return flexBubble(TEXT.WELCOME, [
-    { type: 'text', text: name ? `สวัสดี คุณ${name}!` : 'สวัสดี!', size: 'lg', weight: 'bold', color: THEME.PRIMARY, align: 'center' },
-    { type: 'text', text: 'ยินดีต้อนรับสู่ระบบสมาชิก ☕', size: 'sm', color: THEME.SECONDARY, align: 'center', margin: 'md' }
-  ], [
-    btn('ดูแต้มคงเหลือ', 'แต้มคงเหลือ', 'primary'),
-    btn('ดูข้อมูลสมาชิก', 'ข้อมูลสมาชิก', 'secondary', 'sm')
-  ]);
-}
-
-function createDefaultMessage() {
-  return flexBubble('ไม่เข้าใจคำสั่ง', [
-    { type: 'text', text: '🤖 ไม่เข้าใจคำสั่ง', weight: 'bold', size: 'lg', color: THEME.PRIMARY },
-    { type: 'text', text: 'ลองพิมพ์ "ช่วยเหลือ" เพื่อดูคำสั่งที่ใช้ได้', margin: 'md', wrap: true }
-  ], [btn('ช่วยเหลือ', 'ช่วยเหลือ', 'primary')]);
-}
-
-function createUserNotFoundMessage() {
-  return flexBubble(TEXT.USER_NOT_FOUND, [
-    { type: 'text', text: '🔎 ไม่พบข้อมูลสมาชิก', weight: 'bold', size: 'xl', color: THEME.ERROR },
-    { type: 'text', text: TEXT.USER_NOT_FOUND, margin: 'md', wrap: true }
-  ], [
-    {
-      type: 'button',
-      action: { type: 'uri', label: 'ลงทะเบียนสมาชิก', uri: 'https://dekcha-frontend.vercel.app/' },
-      style: 'primary', color: THEME.PRIMARY
+  return {
+    type: 'flex',
+    altText: TEXT.WELCOME,
+    contents: {
+      type: 'bubble',
+      size: 'giga',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: TEXT.WELCOME,
+                size: 'xl',
+                weight: 'bold',
+                color: THEME.PRIMARY,
+                align: 'center'
+              },
+              {
+                type: 'text',
+                text: name ? `สวัสดีคุณ ${name}` : 'สวัสดี',
+                size: 'lg',
+                color: THEME.TEXT_PRIMARY,
+                align: 'center',
+                margin: 'md'
+              },
+              {
+                type: 'text',
+                text: 'ยินดีต้อนรับสู่ระบบสมาชิก',
+                size: 'sm',
+                color: THEME.TEXT_SECONDARY,
+                align: 'center',
+                margin: 'sm'
+              }
+            ],
+            backgroundColor: THEME.SURFACE,
+            paddingAll: '24px',
+            cornerRadius: '16px',
+            margin: 'none'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              modernButton('ดูแต้มคงเหลือ', 'แต้มคงเหลือ', true),
+              modernButton('ดูข้อมูลสมาชิก', 'ข้อมูลสมาชิก', false)
+            ],
+            spacing: 'md',
+            margin: 'xl'
+          }
+        ],
+        paddingAll: '20px',
+        backgroundColor: THEME.BACKGROUND,
+        spacing: 'none'
+      }
     }
-  ]);
+  };
 }
 
 function createPointFlexMessage(user) {
@@ -155,31 +198,85 @@ function createPointFlexMessage(user) {
     altText: `${TEXT.POINT_BALANCE} ${user.name}`,
     contents: {
       type: 'bubble',
-      header: flexHeader(TEXT.POINT_BALANCE),
-      hero: {
-        type: 'box', layout: 'vertical', contents: [
-          { type: 'text', text: `${user.userpoint}`, size: '5xl', weight: 'bold', align: 'center', color: THEME.PRIMARY },
-          { type: 'text', text: 'แต้ม', size: 'sm', align: 'center', color: THEME.SECONDARY, margin: 'sm' }
-        ], paddingAll: '20px', backgroundColor: THEME.BACKGROUND
-      },
+      size: 'giga',
       body: {
-        type: 'box', layout: 'vertical', contents: [
-          flexRow('👤 สมาชิก', user.name),
-          { type: 'separator', margin: 'lg', color: THEME.TEXT_LIGHT }
-        ], paddingAll: '20px', backgroundColor: THEME.BACKGROUND
-      },
-      footer: flexFooter([
-        {
-          type: 'button',
-          action: {
-            type: 'uri',
-            label: 'แลกสิทธิพิเศษ',
-            uri: 'https://dekcha-frontend.vercel.app/' // เปลี่ยนลิงก์นี้เป็นลิงก์ที่ต้องการ
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: TEXT.POINT_BALANCE,
+            size: 'xl',
+            weight: 'bold',
+            color: THEME.PRIMARY,
+            align: 'center'
           },
-          style: 'primary',
-          color: THEME.PRIMARY
-        }
-      ])
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: `${user.userpoint}`,
+                size: '5xl',
+                weight: 'bold',
+                color: THEME.PRIMARY,
+                align: 'center'
+              },
+              {
+                type: 'text',
+                text: 'แต้ม',
+                size: 'md',
+                color: THEME.TEXT_SECONDARY,
+                align: 'center',
+                margin: 'sm'
+              }
+            ],
+            backgroundColor: THEME.SURFACE,
+            cornerRadius: '20px',
+            paddingAll: '32px',
+            margin: 'xl'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              infoRow('สมาชิก', user.name),
+              {
+                type: 'separator',
+                margin: 'lg',
+                color: THEME.ACCENT
+              },
+              infoRow('ระดับ', getMemberLevel(user.userpoint).title)
+            ],
+            backgroundColor: THEME.SURFACE,
+            cornerRadius: '16px',
+            paddingAll: '20px',
+            margin: 'lg'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'button',
+                action: {
+                  type: 'uri',
+                  label: 'แลกสิทธิพิเศษ',
+                  uri: 'https://dekcha-frontend.vercel.app/'
+                },
+                style: 'primary',
+                color: THEME.PRIMARY,
+                height: 'md'
+              }
+            ],
+            margin: 'xl'
+          }
+        ],
+        paddingAll: '20px',
+        backgroundColor: THEME.BACKGROUND,
+        spacing: 'none'
+      }
     }
   };
 }
@@ -191,100 +288,471 @@ function createUserInfoFlexMessage(user) {
     altText: `${TEXT.USER_INFO} ${user.name}`,
     contents: {
       type: 'bubble',
-      header: flexHeader(TEXT.USER_INFO),
-      hero: {
-        type: 'box', layout: 'vertical', contents: [
-          { type: 'text', text: level.title, size: 'lg', weight: 'bold', align: 'center', color: level.color },
-          { type: 'text', text: level.description, size: 'xs', align: 'center', color: THEME.SECONDARY, margin: 'sm' }
-        ], paddingAll: '15px', backgroundColor: THEME.BACKGROUND
-      },
+      size: 'giga',
       body: {
-        type: 'box', layout: 'vertical', contents: [
-          flexRow('👤 ชื่อสมาชิก', user.name, true),
-          { type: 'separator', margin: 'lg', color: THEME.TEXT_LIGHT },
-          flexRow('🔑 รหัสสมาชิก', user.uid, true),
-          { type: 'separator', margin: 'lg', color: THEME.TEXT_LIGHT },
-          flexRow('✨ แต้มสะสม', `${user.userpoint} แต้ม`, true, level.color)
-        ], paddingAll: '20px', backgroundColor: THEME.BACKGROUND
-      },
-      footer: flexFooter([
-        btn('ดูแต้มคงเหลือ', 'แต้มคงเหลือ', 'primary'),
-        btn('ดูเมนู', 'เมนู', 'secondary', 'sm')
-      ])
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: TEXT.USER_INFO,
+            size: 'xl',
+            weight: 'bold',
+            color: THEME.PRIMARY,
+            align: 'center'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: level.title,
+                size: 'lg',
+                weight: 'bold',
+                color: level.color,
+                align: 'center'
+              },
+              {
+                type: 'text',
+                text: level.description,
+                size: 'sm',
+                color: THEME.TEXT_SECONDARY,
+                align: 'center',
+                margin: 'sm'
+              }
+            ],
+            backgroundColor: THEME.SURFACE,
+            cornerRadius: '16px',
+            paddingAll: '20px',
+            margin: 'xl'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              infoRow('ชื่อสมาชิก', user.name),
+              {
+                type: 'separator',
+                margin: 'lg',
+                color: THEME.ACCENT
+              },
+              infoRow('รหัสสมาชิก', user.uid),
+              {
+                type: 'separator',
+                margin: 'lg',
+                color: THEME.ACCENT
+              },
+              infoRow('แต้มสะสม', `${user.userpoint} แต้ม`, level.color)
+            ],
+            backgroundColor: THEME.SURFACE,
+            cornerRadius: '16px',
+            paddingAll: '20px',
+            margin: 'lg'
+          },
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              modernButton('ดูแต้มคงเหลือ', 'แต้มคงเหลือ', true, 'sm'),
+              modernButton('ดูเมนู', 'เมนู', false, 'sm')
+            ],
+            spacing: 'md',
+            margin: 'xl'
+          }
+        ],
+        paddingAll: '20px',
+        backgroundColor: THEME.BACKGROUND,
+        spacing: 'none'
+      }
     }
   };
 }
 
 function createMenuFlexMessage() {
-  return flexBubble(TEXT.MENU_TITLE, [
-    { type: 'text', text: '☕ กาแฟ\n🍵 ชา\n🧁 ขนมหวาน\n🥪 ขนมปัง', wrap: true, size: 'md', color: THEME.TEXT_DARK }
-  ], [btn('สั่งสินค้า', 'สั่งสินค้า', 'primary')]);
-}
+  const menuItems = [
+    { name: 'เครื่องดื่มร้อน', desc: 'กาแฟ, ชา, ช็อกโกแลต' },
+    { name: 'เครื่องดื่มเย็น', desc: 'ชานมไข่มุก, กาแฟเย็น' },
+    { name: 'ขนมหวาน', desc: 'เค้ก, คุกกี้, มาการอง' },
+    { name: 'ขนมปัง', desc: 'แซนวิช, ครัวซอง' }
+  ];
 
-function createHelpFlexMessage() {
-  return flexBubble(TEXT.HELP_TITLE, [
-    { type: 'text', text: '📝 คำสั่งที่ใช้ได้:\n\n• "แต้มคงเหลือ" - ดูแต้มสะสม\n• "ข้อมูลสมาชิก" - ดูข้อมูลผู้ใช้งาน\n• "เมนู" - ดูเมนูสินค้า\n• "สวัสดี" - ข้อความต้อนรับ', wrap: true, size: 'sm', color: THEME.TEXT_DARK }
-  ], [btn('ดูแต้มคงเหลือ', 'แต้มคงเหลือ', 'primary')]);
-}
-
-function createErrorFlexMessage(msg) {
-  return flexBubble(TEXT.ERROR_TITLE, [
-    { type: 'text', text: TEXT.ERROR_TITLE, weight: 'bold', size: 'xl', color: THEME.ERROR },
-    { type: 'text', text: msg || TEXT.ERROR_MESSAGE, margin: 'md', wrap: true }
-  ]);
-}
-
-// --- FLEX HELPERS ---
-function flexBubble(altText, bodyContents, footerContents = []) {
   return {
     type: 'flex',
-    altText,
+    altText: TEXT.MENU_TITLE,
     contents: {
       type: 'bubble',
-      header: flexHeader(altText),
-      body: { type: 'box', layout: 'vertical', contents: bodyContents, paddingAll: '20px', backgroundColor: THEME.BACKGROUND },
-      ...(footerContents.length && { footer: flexFooter(footerContents) }),
-      styles: { body: { backgroundColor: THEME.BACKGROUND }, footer: { backgroundColor: THEME.FOOTER_BG } }
+      size: 'giga',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: TEXT.MENU_TITLE,
+            size: 'xl',
+            weight: 'bold',
+            color: THEME.PRIMARY,
+            align: 'center'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: menuItems.map(item => createMenuItem(item.name, item.desc)),
+            backgroundColor: THEME.SURFACE,
+            cornerRadius: '16px',
+            paddingAll: '20px',
+            margin: 'xl',
+            spacing: 'md'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'button',
+                action: {
+                  type: 'uri',
+                  label: 'สั่งสินค้า',
+                  uri: 'https://dekcha-frontend.vercel.app/'
+                },
+                style: 'primary',
+                color: THEME.PRIMARY,
+                height: 'md'
+              }
+            ],
+            margin: 'xl'
+          }
+        ],
+        paddingAll: '20px',
+        backgroundColor: THEME.BACKGROUND,
+        spacing: 'none'
+      }
     }
   };
 }
-function flexHeader(text) {
+
+function createHelpFlexMessage() {
+  const commands = [
+    { cmd: 'แต้มคงเหลือ', desc: 'ดูแต้มสะสมของคุณ' },
+    { cmd: 'ข้อมูลสมาชิก', desc: 'ดูข้อมูลผู้ใช้งาน' },
+    { cmd: 'เมนู', desc: 'ดูเมนูสินค้า' },
+    { cmd: 'สวัสดี', desc: 'ข้อความต้อนรับ' }
+  ];
+
   return {
-    type: 'box',
-    layout: 'vertical',
-    contents: [{ type: 'text', text, weight: 'bold', color: '#FFFFFF', size: 'xl', align: 'center' }],
-    backgroundColor: THEME.HEADER_BG,
-    paddingTop: '20px',
-    paddingBottom: '20px'
+    type: 'flex',
+    altText: TEXT.HELP_TITLE,
+    contents: {
+      type: 'bubble',
+      size: 'giga',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: TEXT.HELP_TITLE,
+            size: 'xl',
+            weight: 'bold',
+            color: THEME.PRIMARY,
+            align: 'center'
+          },
+          {
+            type: 'text',
+            text: 'คำสั่งที่ใช้ได้',
+            size: 'md',
+            color: THEME.TEXT_SECONDARY,
+            align: 'center',
+            margin: 'md'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: commands.map(item => createHelpItem(item.cmd, item.desc)),
+            backgroundColor: THEME.SURFACE,
+            cornerRadius: '16px',
+            paddingAll: '20px',
+            margin: 'xl',
+            spacing: 'md'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              modernButton('ดูแต้มคงเหลือ', 'แต้มคงเหลือ', true)
+            ],
+            margin: 'xl'
+          }
+        ],
+        paddingAll: '20px',
+        backgroundColor: THEME.BACKGROUND,
+        spacing: 'none'
+      }
+    }
   };
 }
-function flexFooter(contents) {
-  return { type: 'box', layout: 'vertical', contents, paddingAll: '15px', backgroundColor: THEME.FOOTER_BG };
+
+function createDefaultMessage() {
+  return {
+    type: 'flex',
+    altText: 'ไม่เข้าใจคำสั่ง',
+    contents: {
+      type: 'bubble',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: 'ไม่เข้าใจคำสั่ง',
+            size: 'xl',
+            weight: 'bold',
+            color: THEME.WARNING,
+            align: 'center'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: 'กรุณาเลือกคำสั่งที่ถูกต้อง',
+                size: 'md',
+                color: THEME.TEXT_SECONDARY,
+                align: 'center'
+              },
+              {
+                type: 'text',
+                text: 'หรือพิมพ์ "ช่วยเหลือ" เพื่อดูคำสั่งทั้งหมด',
+                size: 'sm',
+                color: THEME.TEXT_SECONDARY,
+                align: 'center',
+                margin: 'sm',
+                wrap: true
+              }
+            ],
+            backgroundColor: THEME.SURFACE,
+            cornerRadius: '16px',
+            paddingAll: '20px',
+            margin: 'xl'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              modernButton('ช่วยเหลือ', 'ช่วยเหลือ', true)
+            ],
+            margin: 'xl'
+          }
+        ],
+        paddingAll: '20px',
+        backgroundColor: THEME.BACKGROUND,
+        spacing: 'none'
+      }
+    }
+  };
 }
-function flexRow(label, value, bold = false, color) {
+
+function createUserNotFoundMessage() {
+  return {
+    type: 'flex',
+    altText: TEXT.USER_NOT_FOUND,
+    contents: {
+      type: 'bubble',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: 'ไม่พบข้อมูลสมาชิก',
+            size: 'xl',
+            weight: 'bold',
+            color: THEME.ERROR,
+            align: 'center'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: TEXT.USER_NOT_FOUND,
+                size: 'md',
+                color: THEME.TEXT_SECONDARY,
+                align: 'center',
+                wrap: true
+              }
+            ],
+            backgroundColor: THEME.SURFACE,
+            cornerRadius: '16px',
+            paddingAll: '20px',
+            margin: 'xl'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'button',
+                action: {
+                  type: 'uri',
+                  label: 'ลงทะเบียนสมาชิก',
+                  uri: 'https://dekcha-frontend.vercel.app/'
+                },
+                style: 'primary',
+                color: THEME.PRIMARY,
+                height: 'md'
+              }
+            ],
+            margin: 'xl'
+          }
+        ],
+        paddingAll: '20px',
+        backgroundColor: THEME.BACKGROUND,
+        spacing: 'none'
+      }
+    }
+  };
+}
+
+function createErrorFlexMessage(msg) {
+  return {
+    type: 'flex',
+    altText: TEXT.ERROR_TITLE,
+    contents: {
+      type: 'bubble',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: TEXT.ERROR_TITLE,
+            size: 'xl',
+            weight: 'bold',
+            color: THEME.ERROR,
+            align: 'center'
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: msg || TEXT.ERROR_MESSAGE,
+                size: 'md',
+                color: THEME.TEXT_SECONDARY,
+                align: 'center',
+                wrap: true
+              }
+            ],
+            backgroundColor: THEME.SURFACE,
+            cornerRadius: '16px',
+            paddingAll: '20px',
+            margin: 'xl'
+          }
+        ],
+        paddingAll: '20px',
+        backgroundColor: THEME.BACKGROUND,
+        spacing: 'none'
+      }
+    }
+  };
+}
+
+// --- MODERN HELPER FUNCTIONS ---
+function modernButton(label, text, isPrimary, size = 'md') {
+  return {
+    type: 'button',
+    action: {
+      type: 'message',
+      label: label,
+      text: text
+    },
+    style: isPrimary ? 'primary' : 'secondary',
+    color: isPrimary ? THEME.PRIMARY : THEME.SECONDARY,
+    height: size,
+    flex: 1
+  };
+}
+
+function infoRow(label, value, valueColor = THEME.TEXT_PRIMARY) {
   return {
     type: 'box',
     layout: 'horizontal',
     contents: [
-      { type: 'text', text: label, size: 'sm', color: THEME.SECONDARY, flex: 1, ...(bold && { weight: 'bold' }) },
-      { type: 'text', text: value, size: 'sm', color: color || THEME.TEXT_DARK, align: 'end', flex: 2, ...(bold && { weight: 'bold' }) }
+      {
+        type: 'text',
+        text: label,
+        size: 'sm',
+        color: THEME.TEXT_SECONDARY,
+        flex: 1
+      },
+      {
+        type: 'text',
+        text: value,
+        size: 'sm',
+        color: valueColor,
+        weight: 'bold',
+        align: 'end',
+        flex: 2
+      }
     ],
     margin: 'md'
   };
 }
-function btn(label, text, style = 'primary', margin) {
+
+function createMenuItem(name, desc) {
   return {
-    type: 'button',
-    action: { type: 'message', label, text },
-    style,
-    color: style === 'primary' ? THEME.PRIMARY : THEME.SECONDARY,
-    ...(margin && { margin })
+    type: 'box',
+    layout: 'vertical',
+    contents: [
+      {
+        type: 'text',
+        text: name,
+        size: 'md',
+        weight: 'bold',
+        color: THEME.PRIMARY
+      },
+      {
+        type: 'text',
+        text: desc,
+        size: 'sm',
+        color: THEME.TEXT_SECONDARY,
+        margin: 'xs'
+      }
+    ]
   };
 }
+
+function createHelpItem(cmd, desc) {
+  return {
+    type: 'box',
+    layout: 'vertical',
+    contents: [
+      {
+        type: 'text',
+        text: `"${cmd}"`,
+        size: 'sm',
+        weight: 'bold',
+        color: THEME.PRIMARY
+      },
+      {
+        type: 'text',
+        text: desc,
+        size: 'xs',
+        color: THEME.TEXT_SECONDARY,
+        margin: 'xs'
+      }
+    ]
+  };
+}
+
 function getMemberLevel(points) {
-  if (points >= 50) return { title: 'GOLD MEMBER', description: 'สมาชิกระดับทอง', color: '#FFD700' };
-  if (points >= 30) return { title: 'SILVER MEMBER', description: 'สมาชิกระดับเงิน', color: '#C0C0C0' };
+  if (points >= 50) return { title: 'GOLD MEMBER', description: 'สมาชิกระดับทอง', color: '#B8860B' };
+  if (points >= 30) return { title: 'SILVER MEMBER', description: 'สมาชิกระดับเงิน', color: '#708090' };
   if (points >= 10) return { title: 'BRONZE MEMBER', description: 'สมาชิกระดับทองแดง', color: '#CD7F32' };
   return { title: 'MEMBER', description: 'สมาชิกทั่วไป', color: THEME.SECONDARY };
 }
-
