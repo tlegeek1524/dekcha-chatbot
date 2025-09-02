@@ -7,7 +7,7 @@ const config = {
   channelSecret: process.env.LINE_CHANNEL_SECRET
 };
 const supabase = createClient(
-  'https://uibaorxgziixlbslvlcm.supabase.co',
+  'https://mhpetiaaadwsvrtbkmue.supabase.co',
   process.env.SUPABASE_KEY
 );
 const client = new line.Client(config);
