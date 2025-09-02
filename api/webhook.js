@@ -101,11 +101,12 @@ async function getUserData(userId) {
   }
 }
 
+// ปรับปรุงฟังก์ชัน getMenuItems ให้ดึงคอลัมน์ที่มีอยู่ในฐานข้อมูล
 async function getMenuItems(status) {
   try {
     const { data, error } = await supabase
       .from('menu')
-      .select('name, desc')
+      .select('idmenu, name, point, category, image')
       .eq('status', status);
 
     if (error) {
@@ -322,75 +323,102 @@ function createMenuMessage() {
   };
 }
 
+// ฟังก์ชันสร้าง Flexible Message แบบ Carousel สำหรับแสดงเมนู
 function createMenuDisplayMessage(menuItems, title) {
-  const menuContents = menuItems.length > 0
-    ? menuItems.map(item => ({
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-          {
-            type: 'text',
-            text: item.name,
-            size: 'sm',
-            weight: 'bold',
-            color: THEME.PRIMARY
-          },
-          {
-            type: 'text',
-            text: item.desc,
-            size: 'xs',
-            color: THEME.TEXT_SECONDARY,
-            margin: 'xs'
-          }
-        ]
-      }))
-    : [
+  if (menuItems.length === 0) {
+    return {
+      type: 'flex',
+      altText: `รายการ${title}`,
+      contents: {
+        type: 'bubble',
+        body: {
+          type: 'box',
+          layout: 'vertical',
+          contents: [
+            headerBox(title),
+            {
+              type: 'box',
+              layout: 'vertical',
+              contents: [{
+                type: 'text',
+                text: 'ไม่พบรายการเมนูในขณะนี้',
+                size: 'sm',
+                color: THEME.TEXT_SECONDARY,
+                align: 'center'
+              }],
+              backgroundColor: THEME.SURFACE,
+              cornerRadius: '12px',
+              paddingAll: '16px',
+              margin: 'md',
+              spacing: 'md'
+            }
+          ],
+          paddingAll: '16px',
+          backgroundColor: THEME.BACKGROUND,
+          spacing: 'sm'
+        }
+      }
+    };
+  }
+
+  const menuBubbles = menuItems.map(item => ({
+    type: 'bubble',
+    hero: {
+      type: 'image',
+      url: item.image || 'https://via.placeholder.com/400x200?text=No+Image', // ใช้ URL รูปภาพจากฐานข้อมูล
+      size: 'full',
+      aspectRatio: '20:13',
+      aspectMode: 'cover'
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'md',
+      contents: [
         {
           type: 'text',
-          text: 'ไม่พบรายการเมนูในขณะนี้',
+          text: item.name,
+          weight: 'bold',
+          size: 'xl',
+          wrap: true
+        },
+        {
+          type: 'text',
+          text: `ประเภท: ${item.category}`,
           size: 'sm',
           color: THEME.TEXT_SECONDARY,
-          align: 'center'
+          margin: 'sm'
+        },
+        {
+          type: 'text',
+          text: `ใช้ ${item.point} แต้ม`,
+          size: 'md',
+          color: THEME.PRIMARY,
+          weight: 'bold'
+        },
+        {
+          type: 'button',
+          action: {
+            type: 'uri',
+            label: 'สั่งเลย',
+            uri: `https://dekcha-frontend.vercel.app/order/${item.idmenu}`
+          },
+          style: 'primary',
+          color: THEME.PRIMARY,
+          height: 'sm',
+          margin: 'md'
         }
-      ];
+      ],
+      paddingAll: '12px'
+    }
+  }));
 
   return {
     type: 'flex',
     altText: `รายการ${title}`,
     contents: {
-      type: 'bubble',
-      body: {
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-          headerBox(title),
-          {
-            type: 'box',
-            layout: 'vertical',
-            contents: menuContents,
-            backgroundColor: THEME.SURFACE,
-            cornerRadius: '12px',
-            paddingAll: '16px',
-            margin: 'md',
-            spacing: 'md'
-          },
-          {
-            type: 'button',
-            action: {
-              type: 'uri',
-              label: 'สั่งสินค้า',
-              uri: 'https://dekcha-frontend.vercel.app/'
-            },
-            style: 'primary',
-            color: THEME.PRIMARY,
-            height: 'sm',
-            margin: 'lg'
-          }
-        ],
-        paddingAll: '16px',
-        backgroundColor: THEME.BACKGROUND,
-        spacing: 'sm'
-      }
+      type: 'carousel',
+      contents: menuBubbles
     }
   };
 }
