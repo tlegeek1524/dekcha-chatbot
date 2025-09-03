@@ -86,7 +86,7 @@ async function handleEvent(event) {
       const menuType = menuName === 'เมนูทั่วไป' ? 0 : 2;
       
       const menuItems = await getMenuItems(menuType);
-      return reply(event, createMenuDisplayMessage(menuItems, menuName, page));
+      return reply(event, createMenuDisplayMessage(menuItems, menuName, page, menuType));
     }
 
     // 2. Check for other commands using the command map
@@ -132,8 +132,9 @@ async function getMenuItems(status) {
   console.log(`[getMenuItems] Cache MISS for status: ${status}. Fetching from DB.`);
 
   try {
+    // UPDATED: Include 'exp' and 'date' fields
     const { data, error } = await supabase.from('menu')
-      .select('idmenu, name, point, category, image').eq('status', status).order('name');
+      .select('idmenu, name, point, category, image, exp, date').eq('status', status).order('name');
 
     if (error) throw error;
 
@@ -142,7 +143,9 @@ async function getMenuItems(status) {
         name: item.name || 'ไม่ระบุชื่อ',
         point: item.point || 0,
         category: item.category || 'อื่นๆ',
-        image: item.image || ''
+        image: item.image || '',
+        exp: item.exp || null,
+        date: item.date || null
     }));
       
     menuCache.set(cacheKey, menuItems); // Save to cache
@@ -415,7 +418,7 @@ function createMenuMessage() {
   };
 }
 
-function createMenuDisplayMessage(menuItems, title, page = 1) {
+function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
   if (!menuItems || menuItems.length === 0) {
     return {
       type: 'flex',
@@ -479,6 +482,66 @@ function createMenuDisplayMessage(menuItems, title, page = 1) {
 
   const menuBubbles = pageItems.map(item => {
     const imageUrl = item.image || 'https://via.placeholder.com/640x400?text=No+Image';
+    
+    // Check if the promotion has expired
+    const isPromotion = menuType === 2;
+    const isExpired = isPromotion && item.exp && new Date(item.exp) < new Date();
+
+    const additionalInfo = [];
+    if (isPromotion) {
+        if (item.exp) {
+            const expDate = new Date(item.exp);
+            const formattedExp = expDate.toLocaleDateString('th-TH', { 
+                year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            additionalInfo.push({
+                type: 'text',
+                text: `วันหมดอายุ: ${formattedExp}`,
+                size: 'sm',
+                color: isExpired ? THEME.ERROR : THEME.TEXT_SECONDARY,
+                margin: 'sm'
+            });
+        }
+        if (item.date) {
+            const createdDate = new Date(item.date);
+            const formattedDate = createdDate.toLocaleDateString('th-TH', { 
+                year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            additionalInfo.push({
+                type: 'text',
+                text: `วันที่เพิ่ม: ${formattedDate}`,
+                size: 'sm',
+                color: THEME.TEXT_SECONDARY,
+                margin: 'sm'
+            });
+        }
+    }
+
+    // Display "Expired" message and disable button if expired
+    const footerContents = [];
+    if (isExpired) {
+        footerContents.push({
+            type: 'text',
+            text: 'โปรโมชั่นหมดอายุแล้ว',
+            size: 'sm',
+            color: THEME.ERROR,
+            align: 'center',
+            wrap: true
+        });
+    } else {
+        footerContents.push({
+            type: 'button',
+            action: {
+                type: 'uri',
+                label: 'แลกสิทธิ',
+                uri: `https://dekcha-frontend.vercel.app/order/${item.idmenu}`
+            },
+            style: 'primary',
+            color: THEME.PRIMARY,
+            height: 'sm'
+        });
+    }
+
     return {
       type: 'bubble',
       hero: {
@@ -508,6 +571,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1) {
             color: THEME.TEXT_SECONDARY,
             margin: 'sm'
           },
+          ...additionalInfo, // Add new date fields here
           {
             type: 'box',
             layout: 'horizontal',
@@ -537,19 +601,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1) {
       footer: {
         type: 'box',
         layout: 'vertical',
-        contents: [
-          {
-            type: 'button',
-            action: {
-              type: 'uri',
-              label: 'แลกสิทธิ',
-              uri: `https://dekcha-frontend.vercel.app/order/${item.idmenu}`
-            },
-            style: 'primary',
-            color: THEME.PRIMARY,
-            height: 'sm'
-          }
-        ],
+        contents: footerContents,
         paddingAll: '12px'
       }
     };
