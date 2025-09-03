@@ -133,15 +133,15 @@ async function getUserData(userId) {
   }
 }
 
-// ปรับปรุงฟังก์ชัน getMenuItems ให้มี error handling ที่ดีขึ้น
+// ปรับปรุงฟังก์ชัน getMenuItems ให้มี error handling ที่ดีขึ้น (เพิ่ม select 'image')
 async function getMenuItems(status) {
   try {
     console.log(`[getMenuItems] Fetching menu items with status: ${status}`);
     
-    // ดึงเฉพาะฟิลด์ที่ต้องการ ไม่เอา image
+    // ดึง field 'image' เพิ่มเข้ามา
     const { data, error } = await supabase
       .from('menu')
-      .select('idmenu, name, point, category')
+      .select('idmenu, name, point, category, image')  // เพิ่ม 'image' ที่นี่
       .eq('status', status)
       .order('name'); // เรียงตามชื่อ
 
@@ -160,7 +160,8 @@ async function getMenuItems(status) {
       idmenu: item.idmenu || '',
       name: item.name || 'ไม่ระบุชื่อ',
       point: item.point || 0,
-      category: item.category || 'อื่นๆ'
+      category: item.category || 'อื่นๆ',
+      image: item.image || ''  // ถ้าว่าง จะจัดการใน createMenuDisplayMessage
     }));
 
     console.log(`[getMenuItems] Successfully fetched ${validatedItems.length} items`);
@@ -514,80 +515,83 @@ function createMenuDisplayMessage(menuItems, title) {
   }
 
   // สร้าง Carousel สำหรับแสดงรายการเมนู
-  const menuBubbles = menuItems.slice(0, 10).map(item => ({
-    type: 'bubble',
-    hero: {
-      type: 'image',
-      url: item.image,
-      size: 'full',
-      aspectRatio: '20:13',
-      aspectMode: 'cover'
-    },
-    body: {
-      type: 'box',
-      layout: 'vertical',
-      spacing: 'md',
-      contents: [
-        {
-          type: 'text',
-          text: item.name,
-          weight: 'bold',
-          size: 'lg',
-          wrap: true,
-          color: THEME.TEXT_PRIMARY
-        },
-        {
-          type: 'text',
-          text: `ประเภท: ${item.category}`,
-          size: 'sm',
-          color: THEME.TEXT_SECONDARY,
-          margin: 'sm'
-        },
-        {
-          type: 'box',
-          layout: 'horizontal',
-          contents: [
-            {
-              type: 'text',
-              text: 'ใช้แต้ม',
-              size: 'sm',
-              color: THEME.TEXT_SECONDARY,
-              flex: 1
-            },
-            {
-              type: 'text',
-              text: `${item.point} แต้ม`,
-              size: 'md',
-              color: THEME.PRIMARY,
-              weight: 'bold',
-              flex: 2,
-              align: 'end'
-            }
-          ],
-          margin: 'md'
-        }
-      ],
-      paddingAll: '16px'
-    },
-    footer: {
-      type: 'box',
-      layout: 'vertical',
-      contents: [
-        {
-          type: 'button',
-          action: {
-            type: 'uri',
-            label: 'สั่งเลย',
-            uri: `https://dekcha-frontend.vercel.app/order/${item.idmenu}`
+  const menuBubbles = menuItems.slice(0, 10).map(item => {
+    const imageUrl = item.image || 'https://via.placeholder.com/640x400?text=No+Image';  // เพิ่ม fallback URL ถ้า image ว่าง
+    return {
+      type: 'bubble',
+      hero: {
+        type: 'image',
+        url: imageUrl,  // ใช้ image จาก database หรือ fallback
+        size: 'full',
+        aspectRatio: '20:13',
+        aspectMode: 'cover'
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          {
+            type: 'text',
+            text: item.name,
+            weight: 'bold',
+            size: 'lg',
+            wrap: true,
+            color: THEME.TEXT_PRIMARY
           },
-          style: 'primary',
-          color: THEME.PRIMARY,
-          height: 'sm'
-        }
-      ],
-      paddingAll: '12px'
-    }
-  }));
+          {
+            type: 'text',
+            text: `ประเภท: ${item.category}`,
+            size: 'sm',
+            color: THEME.TEXT_SECONDARY,
+            margin: 'sm'
+          },
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              {
+                type: 'text',
+                text: 'ใช้แต้ม',
+                size: 'sm',
+                color: THEME.TEXT_SECONDARY,
+                flex: 1
+              },
+              {
+                type: 'text',
+                text: `${item.point} แต้ม`,
+                size: 'md',
+                color: THEME.PRIMARY,
+                weight: 'bold',
+                flex: 2,
+                align: 'end'
+              }
+            ],
+            margin: 'md'
+          }
+        ],
+        paddingAll: '16px'
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            action: {
+              type: 'uri',
+              label: 'สั่งเลย',
+              uri: `https://dekcha-frontend.vercel.app/order/${item.idmenu}`
+            },
+            style: 'primary',
+            color: THEME.PRIMARY,
+            height: 'sm'
+          }
+        ],
+        paddingAll: '12px'
+      }
+    };
+  });
 
   return {
     type: 'flex',
