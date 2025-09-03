@@ -138,10 +138,10 @@ async function getMenuItems(status) {
   try {
     console.log(`[getMenuItems] Fetching menu items with status: ${status}`);
     
-    // เอาคอลัมน์ description ออกเพราะไม่มีในตาราง
+    // ดึงเฉพาะฟิลด์ที่ต้องการ ไม่เอา image
     const { data, error } = await supabase
       .from('menu')
-      .select('idmenu, name, point, category, image')
+      .select('idmenu, name, point, category')
       .eq('status', status)
       .order('name'); // เรียงตามชื่อ
 
@@ -157,11 +157,10 @@ async function getMenuItems(status) {
 
     // Validate และ clean ข้อมูล
     const validatedItems = data.map(item => ({
-      idmenu: item.idmenu || 0,
+      idmenu: item.idmenu || '',
       name: item.name || 'ไม่ระบุชื่อ',
       point: item.point || 0,
-      category: item.category || 'อื่นๆ',
-      image: item.image && item.image.trim() !== '' ? item.image : 'https://via.placeholder.com/400x200?text=No+Image'
+      category: item.category || 'อื่นๆ'
     }));
 
     console.log(`[getMenuItems] Successfully fetched ${validatedItems.length} items`);
@@ -208,7 +207,31 @@ function reply(event, message) {
     console.error('[reply] No reply token found');
     return Promise.resolve();
   }
-  return client.replyMessage(event.replyToken, message);
+
+  // ตรวจสอบขนาดของ message เพื่อป้องกัน payload ใหญ่เกินไป
+  try {
+    const messageSize = JSON.stringify(message).length;
+    console.log(`[reply] Message size: ${messageSize} bytes`);
+    
+    if (messageSize > 50000) { // 50KB limit
+      console.warn('[reply] Message too large, sending simple text instead');
+      const fallbackMessage = {
+        type: 'text',
+        text: 'ข้อมูลมีขนาดใหญ่เกินไป กรุณาใช้เว็บไซต์เพื่อดูรายละเอียด: https://dekcha-frontend.vercel.app/'
+      };
+      return client.replyMessage(event.replyToken, fallbackMessage);
+    }
+    
+    return client.replyMessage(event.replyToken, message);
+  } catch (error) {
+    console.error('[reply] Error sending message:', error);
+    // ส่งข้อความ fallback
+    const errorMessage = {
+      type: 'text',
+      text: 'เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง'
+    };
+    return client.replyMessage(event.replyToken, errorMessage);
+  }
 }
 
 // --- IMPROVED FLEX MESSAGE GENERATORS ---
