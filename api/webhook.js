@@ -8,7 +8,7 @@ const config = {
 };
 
 const supabase = createClient(
-  'https://mhpetiaaadwsvrtbkmue.supabase.co',
+  'https://uibaorxgziixlbslvlcm.supabase.co',
   process.env.SUPABASE_KEY
 );
 
