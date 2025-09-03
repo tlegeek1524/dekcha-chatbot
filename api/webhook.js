@@ -496,7 +496,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
             });
             additionalInfo.push({
                 type: 'text',
-                text: `วันหมดอายุ: ${formattedExp}`,
+                text: `หมดโปรโมชั่น: ${formattedExp}`,
                 size: 'sm',
                 color: isExpired ? THEME.ERROR : THEME.TEXT_SECONDARY,
                 margin: 'sm'
@@ -509,7 +509,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
             });
             additionalInfo.push({
                 type: 'text',
-                text: `วันที่เพิ่ม: ${formattedDate}`,
+                text: `เริ่มโปรโมชั่น: ${formattedDate}`,
                 size: 'sm',
                 color: THEME.TEXT_SECONDARY,
                 margin: 'sm'
