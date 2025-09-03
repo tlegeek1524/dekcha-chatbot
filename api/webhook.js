@@ -497,7 +497,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
                 type: 'text',
                 text: `วันหมดอายุ: ${formattedExp}`,
                 size: 'sm',
-                color: isExpired ? THEME.ERROR : THEME.TEXT_SECONDARY,
+                color: THEME.ERROR, // Highlight in red
                 margin: 'sm'
             });
         }
@@ -510,7 +510,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
                 type: 'text',
                 text: `วันที่เพิ่ม: ${formattedDate}`,
                 size: 'sm',
-                color: THEME.TEXT_SECONDARY,
+                color: THEME.SUCCESS, // Highlight in green
                 margin: 'sm'
             });
         }
