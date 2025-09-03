@@ -69,7 +69,7 @@ async function handleEvent(event) {
     let menuType = null;
     let page = 1;
     if (text.startsWith('เมนูทั่วไป')) {
-      menuType = 1; // status=1 สำหรับทั่วไป
+      menuType = 0; // status=0 สำหรับทั่วไป
       const parts = text.split('หน้า');
       if (parts.length > 1) page = parseInt(parts[1].trim()) || 1;
     } else if (text.startsWith('เมนูโปรโมชั่น')) {
@@ -88,12 +88,16 @@ async function handleEvent(event) {
       case 'เมนู': case 'menu':
         return reply(event, createMenuMessage());
       
+      // --- MODIFIED BLOCK ---
       case 'เมนูทั่วไป':
+        const generalMenu = await getMenuItems(0); // ใช้เลข 0
+        return reply(event, createMenuDisplayMessage(generalMenu, 'เมนูทั่วไป', 1));
+
       case 'เมนูโปรโมชั่น':
-        // ถ้าไม่มี "หน้า" จะ fallback ไป page=1
-        const generalOrPromoMenu = await getMenuItems(menuType || (text === 'เมนูทั่วไป' ? 1 : 2));
-        return reply(event, createMenuDisplayMessage(generalOrPromoMenu, text.toUpperCase(), page));
-      
+        const promoMenu = await getMenuItems(2); // ใช้เลข 2
+        return reply(event, createMenuDisplayMessage(promoMenu, 'เมนูโปรโมชั่น', 1));
+      // --- END MODIFIED BLOCK ---
+
       case 'ช่วยเหลือ': case 'help':
         return reply(event, createHelpMessage());
       
@@ -104,7 +108,10 @@ async function handleEvent(event) {
         // ถ้า text มี pagination จาก case ข้างบน
         if (menuType !== null) {
           const menuItems = await getMenuItems(menuType);
-          return reply(event, createMenuDisplayMessage(menuItems, menuType === 1 ? 'เมนูทั่วไป' : 'เมนูโปรโมชั่น', page));
+          // --- MODIFIED LINE ---
+          const title = menuType === 0 ? 'เมนูทั่วไป' : 'เมนูโปรโมชั่น'; // ปรับเงื่อนไขการสร้าง title
+          return reply(event, createMenuDisplayMessage(menuItems, title, page));
+          // --- END MODIFIED LINE ---
         }
         return reply(event, createDefaultMessage());
     }
