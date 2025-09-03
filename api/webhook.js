@@ -81,7 +81,7 @@ async function handleEvent(event) {
     const menuMatch = text.match(menuRegex);
 
     if (menuMatch) {
-      const menuName = menuMatch[1]; // 'เมนูทั่วไป' or 'เมนูโปรโมชั่น'
+      const menuName = menuMatch[1];
       const page = parseInt(menuMatch[2] || '1', 10);
       const menuType = menuName === 'เมนูทั่วไป' ? 0 : 2;
       
@@ -251,15 +251,12 @@ function createPointMessage(user) {
       body: {
         type: 'box',
         layout: 'vertical',
+        spacing: 'md',
         contents: [
-          {
-            type: 'text',
-            text: TEXT.POINT_BALANCE,
-            size: 'lg',
-            weight: 'bold',
-            color: THEME.PRIMARY,
-            align: 'center'
-          },
+          // Header
+          headerBox('✨ แต้มสะสมของคุณ', level.title, level.color),
+          { type: 'separator', margin: 'lg' },
+          // Point Display Area
           {
             type: 'box',
             layout: 'vertical',
@@ -267,10 +264,11 @@ function createPointMessage(user) {
               {
                 type: 'text',
                 text: `${user.userpoint || 0}`,
-                size: '4xl',
+                size: '5xl',
                 weight: 'bold',
                 color: THEME.PRIMARY,
-                align: 'center'
+                align: 'center',
+                margin: 'none'
               },
               {
                 type: 'text',
@@ -280,10 +278,6 @@ function createPointMessage(user) {
                 align: 'center'
               }
             ],
-            backgroundColor: THEME.SURFACE,
-            cornerRadius: '12px',
-            paddingAll: '20px',
-            margin: 'lg'
           },
           compactInfoBox([
             { label: 'สมาชิก', value: user.name || 'ไม่ระบุ' },
@@ -298,13 +292,12 @@ function createPointMessage(user) {
             },
             style: 'primary',
             color: THEME.PRIMARY,
-            height: 'sm',
+            height: 'md',
             margin: 'lg'
           }
         ],
         paddingAll: '20px',
-        backgroundColor: THEME.BACKGROUND,
-        spacing: 'md'
+        backgroundColor: THEME.BACKGROUND
       }
     }
   };
@@ -487,33 +480,18 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
     const isExpired = isPromotion && item.exp && new Date(item.exp) < new Date();
 
     const additionalInfo = [];
-    if (isPromotion) {
-        if (item.exp) {
-            const expDate = new Date(item.exp);
-            const formattedExp = expDate.toLocaleDateString('th-TH', { 
-                year: 'numeric', month: 'long', day: 'numeric' 
-            });
-            additionalInfo.push({
-                type: 'text',
-                text: `หมดโปรโมชั่น: ${formattedExp}`,
-                size: 'sm',
-                color: THEME.ERROR, // Highlight in red
-                margin: 'sm'
-            });
-        }
-        if (item.date) {
-            const createdDate = new Date(item.date);
-            const formattedDate = createdDate.toLocaleDateString('th-TH', { 
-                year: 'numeric', month: 'long', day: 'numeric' 
-            });
-            additionalInfo.push({
-                type: 'text',
-                text: `เริ่มโปรโมชั่น: ${formattedDate}`,
-                size: 'sm',
-                color: THEME.SUCCESS, // Highlight in green
-                margin: 'sm'
-            });
-        }
+    if (isPromotion && item.exp) {
+        const expDate = new Date(item.exp);
+        const formattedExp = expDate.toLocaleDateString('th-TH', { 
+            year: 'numeric', month: 'long', day: 'numeric' 
+        });
+        additionalInfo.push({
+            type: 'text',
+            text: `หมดโปรโมชั่น: ${formattedExp}`,
+            size: 'sm',
+            color: THEME.ERROR, // Highlight in red
+            margin: 'sm'
+        });
     }
 
     // Display "Expired" message and disable button if expired
@@ -532,7 +510,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
             type: 'button',
             action: {
                 type: 'uri',
-                label: 'แลกสิทธิ',
+                label: 'แลกสิทธิ์',
                 uri: `https://dekcha-frontend.vercel.app/order/${item.idmenu}`
             },
             style: 'primary',
@@ -553,7 +531,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
       body: {
         type: 'box',
         layout: 'vertical',
-        spacing: 'md',
+        spacing: 'sm',
         contents: [
           {
             type: 'text',
@@ -567,8 +545,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
             type: 'text',
             text: `ประเภท: ${item.category}`,
             size: 'sm',
-            color: THEME.TEXT_SECONDARY,
-            margin: 'sm'
+            color: THEME.TEXT_SECONDARY
           },
           ...additionalInfo, // Add new date fields here
           {
@@ -577,17 +554,16 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
             contents: [
               {
                 type: 'text',
-                text: 'ใช้แต้ม',
+                text: 'ใช้',
                 size: 'sm',
-                color: THEME.TEXT_SECONDARY,
-                flex: 1
+                color: THEME.TEXT_SECONDARY
               },
               {
                 type: 'text',
                 text: `${item.point} แต้ม`,
-                size: 'md',
-                color: THEME.PRIMARY,
+                size: 'xl',
                 weight: 'bold',
+                color: THEME.PRIMARY,
                 flex: 2,
                 align: 'end'
               }
