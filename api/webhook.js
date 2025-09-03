@@ -161,7 +161,6 @@ async function getMenuItems(status) {
       point: item.point || 0,
       category: item.category || 'อื่นๆ',
       image: item.image && item.image.trim() !== '' ? item.image : 'https://via.placeholder.com/400x200?text=No+Image',
-      description: item.description || ''
     }));
 
     console.log(`[getMenuItems] Successfully fetched ${validatedItems.length} items`);
