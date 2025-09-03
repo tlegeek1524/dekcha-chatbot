@@ -132,7 +132,6 @@ async function getMenuItems(status) {
   console.log(`[getMenuItems] Cache MISS for status: ${status}. Fetching from DB.`);
 
   try {
-    // UPDATED: Include 'exp' and 'date' fields
     const { data, error } = await supabase.from('menu')
       .select('idmenu, name, point, category, image, exp, date').eq('status', status).order('name');
 
@@ -496,7 +495,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
             });
             additionalInfo.push({
                 type: 'text',
-                text: `หมดโปรโมชั่น: ${formattedExp}`,
+                text: `วันหมดอายุ: ${formattedExp}`,
                 size: 'sm',
                 color: isExpired ? THEME.ERROR : THEME.TEXT_SECONDARY,
                 margin: 'sm'
@@ -509,7 +508,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
             });
             additionalInfo.push({
                 type: 'text',
-                text: `เริ่มโปรโมชั่น: ${formattedDate}`,
+                text: `วันที่เพิ่ม: ${formattedDate}`,
                 size: 'sm',
                 color: THEME.TEXT_SECONDARY,
                 margin: 'sm'
