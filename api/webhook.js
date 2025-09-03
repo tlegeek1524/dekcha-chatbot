@@ -138,9 +138,10 @@ async function getMenuItems(status) {
   try {
     console.log(`[getMenuItems] Fetching menu items with status: ${status}`);
     
+    // เอาคอลัมน์ description ออกเพราะไม่มีในตาราง
     const { data, error } = await supabase
       .from('menu')
-      .select('idmenu, name, point, category, image, description')
+      .select('idmenu, name, point, category, image')
       .eq('status', status)
       .order('name'); // เรียงตามชื่อ
 
@@ -160,7 +161,7 @@ async function getMenuItems(status) {
       name: item.name || 'ไม่ระบุชื่อ',
       point: item.point || 0,
       category: item.category || 'อื่นๆ',
-      image: item.image && item.image.trim() !== '' ? item.image : 'https://via.placeholder.com/400x200?text=No+Image',
+      image: item.image && item.image.trim() !== '' ? item.image : 'https://via.placeholder.com/400x200?text=No+Image'
     }));
 
     console.log(`[getMenuItems] Successfully fetched ${validatedItems.length} items`);
