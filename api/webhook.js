@@ -65,6 +65,19 @@ async function handleEvent(event) {
   console.log(`[Event] User: ${userId}, Message: "${text}"`);
   
   try {
+    // จับ text ที่มี pagination เช่น "เมนูทั่วไป หน้า 2"
+    let menuType = null;
+    let page = 1;
+    if (text.startsWith('เมนูทั่วไป')) {
+      menuType = 1; // status=1 สำหรับทั่วไป
+      const parts = text.split('หน้า');
+      if (parts.length > 1) page = parseInt(parts[1].trim()) || 1;
+    } else if (text.startsWith('เมนูโปรโมชั่น')) {
+      menuType = 2; // status=2 สำหรับโปรโมชั่น
+      const parts = text.split('หน้า');
+      if (parts.length > 1) page = parseInt(parts[1].trim()) || 1;
+    }
+
     switch (text) {
       case 'แต้มคงเหลือ': case 'แต้ม': case 'point': case 'points':
         return handleUserReply(event, userId, createPointMessage, 'ไม่สามารถดึงข้อมูลแต้มสะสมได้');
@@ -76,12 +89,10 @@ async function handleEvent(event) {
         return reply(event, createMenuMessage());
       
       case 'เมนูทั่วไป':
-        const generalMenu = await getMenuItems(1);
-        return reply(event, createMenuDisplayMessage(generalMenu, 'เมนูทั่วไป'));
-      
       case 'เมนูโปรโมชั่น':
-        const promoMenu = await getMenuItems(2);
-        return reply(event, createMenuDisplayMessage(promoMenu, 'เมนูโปรโมชั่น'));
+        // ถ้าไม่มี "หน้า" จะ fallback ไป page=1
+        const generalOrPromoMenu = await getMenuItems(menuType || (text === 'เมนูทั่วไป' ? 1 : 2));
+        return reply(event, createMenuDisplayMessage(generalOrPromoMenu, text.toUpperCase(), page));
       
       case 'ช่วยเหลือ': case 'help':
         return reply(event, createHelpMessage());
@@ -90,6 +101,11 @@ async function handleEvent(event) {
         return handleWelcome(event, userId);
       
       default:
+        // ถ้า text มี pagination จาก case ข้างบน
+        if (menuType !== null) {
+          const menuItems = await getMenuItems(menuType);
+          return reply(event, createMenuDisplayMessage(menuItems, menuType === 1 ? 'เมนูทั่วไป' : 'เมนูโปรโมชั่น', page));
+        }
         return reply(event, createDefaultMessage());
     }
   } catch (error) {
@@ -112,7 +128,7 @@ async function getUserData(userId) {
       .from("user")
       .select('*')
       .eq('userid', userId)
-      .single(); // ใช้ single() เพื่อคาดหวัง 1 record
+      .single();
 
     if (error) {
       console.error('[getUserData] Supabase error:', error);
@@ -133,17 +149,15 @@ async function getUserData(userId) {
   }
 }
 
-// ปรับปรุงฟังก์ชัน getMenuItems ให้มี error handling ที่ดีขึ้น (เพิ่ม select 'image')
 async function getMenuItems(status) {
   try {
     console.log(`[getMenuItems] Fetching menu items with status: ${status}`);
     
-    // ดึง field 'image' เพิ่มเข้ามา
     const { data, error } = await supabase
       .from('menu')
-      .select('idmenu, name, point, category, image')  // เพิ่ม 'image' ที่นี่
+      .select('idmenu, name, point, category, image')
       .eq('status', status)
-      .order('name'); // เรียงตามชื่อ
+      .order('name');
 
     if (error) {
       console.error('[getMenuItems] Supabase error:', error);
@@ -155,13 +169,12 @@ async function getMenuItems(status) {
       return [];
     }
 
-    // Validate และ clean ข้อมูล
     const validatedItems = data.map(item => ({
       idmenu: item.idmenu || '',
       name: item.name || 'ไม่ระบุชื่อ',
       point: item.point || 0,
       category: item.category || 'อื่นๆ',
-      image: item.image || ''  // ถ้าว่าง จะจัดการใน createMenuDisplayMessage
+      image: item.image || ''
     }));
 
     console.log(`[getMenuItems] Successfully fetched ${validatedItems.length} items`);
@@ -209,12 +222,11 @@ function reply(event, message) {
     return Promise.resolve();
   }
 
-  // ตรวจสอบขนาดของ message เพื่อป้องกัน payload ใหญ่เกินไป
   try {
     const messageSize = JSON.stringify(message).length;
     console.log(`[reply] Message size: ${messageSize} bytes`);
     
-    if (messageSize > 50000) { // 50KB limit
+    if (messageSize > 50000) {
       console.warn('[reply] Message too large, sending simple text instead');
       const fallbackMessage = {
         type: 'text',
@@ -226,7 +238,6 @@ function reply(event, message) {
     return client.replyMessage(event.replyToken, message);
   } catch (error) {
     console.error('[reply] Error sending message:', error);
-    // ส่งข้อความ fallback
     const errorMessage = {
       type: 'text',
       text: 'เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง'
@@ -462,7 +473,7 @@ function createMenuMessage() {
   };
 }
 
-function createMenuDisplayMessage(menuItems, title) {
+function createMenuDisplayMessage(menuItems, title, page = 1) {
   if (!menuItems || menuItems.length === 0) {
     return {
       type: 'flex',
@@ -514,14 +525,24 @@ function createMenuDisplayMessage(menuItems, title) {
     };
   }
 
-  // สร้าง Carousel สำหรับแสดงรายการเมนู
-  const menuBubbles = menuItems.slice(0, 10).map(item => {
-    const imageUrl = item.image || 'https://via.placeholder.com/640x400?text=No+Image';  // เพิ่ม fallback URL ถ้า image ว่าง
+  // Pagination logic
+  const itemsPerPage = 5; // ปรับได้ ถ้าต้องการมากกว่านี้ แต่ไม่เกิน 10 เพื่อหลีกเลี่ยง size ใหญ่
+  const totalItems = menuItems.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  page = Math.max(1, Math.min(page, totalPages)); // Validate page
+
+  const start = (page - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  const pageItems = menuItems.slice(start, end);
+
+  // สร้าง bubbles สำหรับหน้านี้
+  const menuBubbles = pageItems.map(item => {
+    const imageUrl = item.image || 'https://via.placeholder.com/640x400?text=No+Image';
     return {
       type: 'bubble',
       hero: {
         type: 'image',
-        url: imageUrl,  // ใช้ image จาก database หรือ fallback
+        url: imageUrl,
         size: 'full',
         aspectRatio: '20:13',
         aspectMode: 'cover'
@@ -593,9 +614,58 @@ function createMenuDisplayMessage(menuItems, title) {
     };
   });
 
+  // เพิ่ม pagination buttons ใน bubble สุดท้าย (หรือสร้าง bubble แยกสำหรับ navigation ถ้าต้องการ)
+  if (menuBubbles.length > 0) {
+    const navContents = [];
+    if (page > 1) {
+      navContents.push({
+        type: 'button',
+        action: {
+          type: 'message',
+          label: 'หน้าก่อนหน้า',
+          text: `${title} หน้า ${page - 1}`
+        },
+        style: 'secondary',
+        color: THEME.SECONDARY,
+        height: 'sm',
+        margin: 'sm'
+      });
+    }
+    if (page < totalPages) {
+      navContents.push({
+        type: 'button',
+        action: {
+          type: 'message',
+          label: 'หน้าต่อไป',
+          text: `${title} หน้า ${page + 1}`
+        },
+        style: 'secondary',
+        color: THEME.SECONDARY,
+        height: 'sm',
+        margin: 'sm'
+      });
+    }
+    navContents.push({
+      type: 'button',
+      action: {
+        type: 'message',
+        label: 'กลับเมนูหลัก',
+        text: 'เมนู'
+      },
+      style: 'secondary',
+      color: THEME.SECONDARY,
+      height: 'sm',
+      margin: 'sm'
+    });
+
+    // เพิ่ม nav ลง footer ของ bubble สุดท้าย
+    const lastBubble = menuBubbles[menuBubbles.length - 1];
+    lastBubble.footer.contents.push(...navContents);
+  }
+
   return {
     type: 'flex',
-    altText: `รายการ${title}`,
+    altText: `รายการ${title} (หน้า ${page}/${totalPages})`,
     contents: {
       type: 'carousel',
       contents: menuBubbles
