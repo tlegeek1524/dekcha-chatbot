@@ -6,48 +6,60 @@ const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.LINE_CHANNEL_SECRET
 };
-
 const supabase = createClient(
   'https://uibaorxgziixlbslvlcm.supabase.co',
   process.env.SUPABASE_KEY
 );
-
 const client = new line.Client(config);
 
-// --- MODERN BROWN THEME ---
+// --- CONSTANTS ---
 const THEME = {
-  PRIMARY: '#3e2723',      
-  SECONDARY: '#5d4037',    
-  ACCENT: '#a1887f',       
-  SURFACE: '#efebe9',      
-  BACKGROUND: '#fafafa',   
-  TEXT_PRIMARY: '#2e2e2e',
-  TEXT_SECONDARY: '#757575',
-  SUCCESS: '#4caf50',
-  WARNING: '#ff9800',
+  PRIMARY: '#3e2723', SECONDARY: '#5d4037', ACCENT: '#a1887f',
+  SURFACE: '#efebe9', BACKGROUND: '#fafafa', TEXT_PRIMARY: '#2e2e2e',
+  TEXT_SECONDARY: '#757575', SUCCESS: '#4caf50', WARNING: '#ff9800',
   ERROR: '#f44336'
 };
-
 const TEXT = {
-  WELCOME: 'ยินดีต้อนรับสู่ DekCha Mueang Tak',
-  POINT_BALANCE: 'แต้มสะสม',
-  USER_INFO: 'ข้อมูลสมาชิก',
-  MENU_TITLE: 'เมนู',
-  HELP_TITLE: 'ช่วยเหลือ',
+  WELCOME: 'ยินดีต้อนรับสู่ DekCha Mueang Tak', POINT_BALANCE: 'แต้มสะสม',
+  USER_INFO: 'ข้อมูลสมาชิก', MENU_TITLE: 'เมนู', HELP_TITLE: 'ช่วยเหลือ',
   USER_NOT_FOUND: 'ไม่พบข้อมูลสมาชิก กรุณาลงทะเบียนก่อน',
-  ERROR_MESSAGE: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง',
-  LOADING: 'กำลังโหลดข้อมูล...'
+  ERROR_MESSAGE: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง'
 };
 
-// --- MAIN HANDLER ---
+// --- NEW: In-Memory Cache for Menu ---
+const menuCache = {
+  data: {},
+  expiry: {},
+  CACHE_DURATION: 5 * 60 * 1000, // 5 นาที
+  get(key) {
+    if (this.expiry[key] > Date.now()) {
+      return this.data[key];
+    }
+    return null;
+  },
+  set(key, value) {
+    this.data[key] = value;
+    this.expiry[key] = Date.now() + this.CACHE_DURATION;
+  }
+};
+
+// --- REFACTORED: Command Mapping ---
+const commandMap = new Map([
+  [['แต้มคงเหลือ', 'แต้ม', 'point', 'points'], (event, userId) => 
+    handleUserReply(event, userId, createPointMessage, 'ไม่สามารถดึงข้อมูลแต้มสะสมได้')],
+  [['ข้อมูลผู้ใช้งาน', 'ข้อมูลสมาชิก', 'profile', 'info'], (event, userId) => 
+    handleUserReply(event, userId, createUserInfoMessage, 'ไม่สามารถดึงข้อมูลสมาชิกได้')],
+  [['เมนู', 'menu'], (event) => reply(event, createMenuMessage())],
+  [['ช่วยเหลือ', 'help'], (event) => reply(event, createHelpMessage())],
+  [['สวัสดี', 'hello', 'hi'], (event, userId) => handleWelcome(event, userId)]
+]);
+
+// --- MAIN HANDLER (Unchanged) ---
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
-  
   try {
     const events = req.body.events || [];
-    console.log(`[Main] Processing ${events.length} events`);
-    
-    const results = await Promise.all(events.map(handleEvent));
+    await Promise.all(events.map(handleEvent));
     res.status(200).json({ success: true, processed: events.length });
   } catch (err) {
     console.error('[Main] Error:', err);
@@ -55,158 +67,100 @@ module.exports = async (req, res) => {
   }
 };
 
-// --- EVENT HANDLER ---
+// --- REFACTORED: Event Handler ---
 async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') return null;
-  
+
   const { userId } = event.source;
   const text = event.message.text.trim().toLowerCase();
-  
   console.log(`[Event] User: ${userId}, Message: "${text}"`);
-  
+
   try {
-    // จับ text ที่มี pagination เช่น "เมนูทั่วไป หน้า 2"
-    let menuType = null;
-    let page = 1;
-    if (text.startsWith('เมนูทั่วไป')) {
-      menuType = 0; // status=0 สำหรับทั่วไป
-      const parts = text.split('หน้า');
-      if (parts.length > 1) page = parseInt(parts[1].trim()) || 1;
-    } else if (text.startsWith('เมนูโปรโมชั่น')) {
-      menuType = 2; // status=2 สำหรับโปรโมชั่น
-      const parts = text.split('หน้า');
-      if (parts.length > 1) page = parseInt(parts[1].trim()) || 1;
+    // 1. Check for menu commands with pagination using Regex
+    const menuRegex = /^(เมนูทั่วไป|เมนูโปรโมชั่น)(?:\s*หน้า\s*(\d+))?$/;
+    const menuMatch = text.match(menuRegex);
+
+    if (menuMatch) {
+      const menuName = menuMatch[1]; // 'เมนูทั่วไป' or 'เมนูโปรโมชั่น'
+      const page = parseInt(menuMatch[2] || '1', 10);
+      const menuType = menuName === 'เมนูทั่วไป' ? 0 : 2;
+      
+      const menuItems = await getMenuItems(menuType);
+      return reply(event, createMenuDisplayMessage(menuItems, menuName, page));
     }
 
-    switch (text) {
-      case 'แต้มคงเหลือ': case 'แต้ม': case 'point': case 'points':
-        return handleUserReply(event, userId, createPointMessage, 'ไม่สามารถดึงข้อมูลแต้มสะสมได้');
-      
-      case 'ข้อมูลผู้ใช้งาน': case 'ข้อมูลสมาชิก': case 'profile': case 'info':
-        return handleUserReply(event, userId, createUserInfoMessage, 'ไม่สามารถดึงข้อมูลสมาชิกได้');
-      
-      case 'เมนู': case 'menu':
-        return reply(event, createMenuMessage());
-      
-      // --- MODIFIED BLOCK ---
-      case 'เมนูทั่วไป':
-        const generalMenu = await getMenuItems(0); // ใช้เลข 0
-        return reply(event, createMenuDisplayMessage(generalMenu, 'เมนูทั่วไป', 1));
-
-      case 'เมนูโปรโมชั่น':
-        const promoMenu = await getMenuItems(2); // ใช้เลข 2
-        return reply(event, createMenuDisplayMessage(promoMenu, 'เมนูโปรโมชั่น', 1));
-      // --- END MODIFIED BLOCK ---
-
-      case 'ช่วยเหลือ': case 'help':
-        return reply(event, createHelpMessage());
-      
-      case 'สวัสดี': case 'hello': case 'hi':
-        return handleWelcome(event, userId);
-      
-      default:
-        // ถ้า text มี pagination จาก case ข้างบน
-        if (menuType !== null) {
-          const menuItems = await getMenuItems(menuType);
-          // --- MODIFIED LINE ---
-          const title = menuType === 0 ? 'เมนูทั่วไป' : 'เมนูโปรโมชั่น'; // ปรับเงื่อนไขการสร้าง title
-          return reply(event, createMenuDisplayMessage(menuItems, title, page));
-          // --- END MODIFIED LINE ---
-        }
-        return reply(event, createDefaultMessage());
+    // 2. Check for other commands using the command map
+    for (const [aliases, handler] of commandMap.entries()) {
+      if (aliases.includes(text)) {
+        return handler(event, userId);
+      }
     }
+
+    // 3. Fallback to default message
+    return reply(event, createDefaultMessage());
+
   } catch (error) {
-    console.error(`[Event] Error handling event:`, error);
+    console.error(`[Event] Error handling event for text "${text}":`, error);
     return reply(event, createErrorMessage());
   }
 }
 
-// --- OPTIMIZED UTILITIES ---
+// --- OPTIMIZED: Database Utilities ---
 async function getUserData(userId) {
-  if (!userId) {
-    console.warn('[getUserData] No userId provided');
-    return { user: null, found: false, error: 'ไม่พบ User ID' };
-  }
-  
+  if (!userId) return { user: null, error: 'ไม่พบ User ID' };
   try {
-    console.log(`[getUserData] Fetching data for user: ${userId}`);
-    
-    const { data, error } = await supabase
-      .from("user")
-      .select('*')
-      .eq('userid', userId)
-      .single();
-
-    if (error) {
-      console.error('[getUserData] Supabase error:', error);
-      return { user: null, found: false, error: error.message };
+    const { data, error } = await supabase.from("user").select('*').eq('userid', userId).single();
+    if (error || !data) {
+      console.warn(`[getUserData] User not found or error for ${userId}:`, error?.message);
+      return { user: null, error: 'ไม่พบข้อมูลผู้ใช้' };
     }
-
-    if (!data) {
-      console.warn('[getUserData] No user data found');
-      return { user: null, found: false, error: 'ไม่พบข้อมูลผู้ใช้' };
-    }
-
-    console.log(`[getUserData] Successfully fetched data for: ${data.name}`);
-    return { user: data, found: true, error: null };
-    
+    return { user: data, error: null };
   } catch (e) {
     console.error("[getUserData] Unexpected error:", e);
-    return { user: null, found: false, error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' };
+    return { user: null, error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' };
   }
 }
 
+// OPTIMIZED with Caching
 async function getMenuItems(status) {
+  const cacheKey = `menu_status_${status}`;
+  const cachedItems = menuCache.get(cacheKey);
+  if (cachedItems) {
+    console.log(`[getMenuItems] Cache HIT for status: ${status}`);
+    return cachedItems;
+  }
+  console.log(`[getMenuItems] Cache MISS for status: ${status}. Fetching from DB.`);
+
   try {
-    console.log(`[getMenuItems] Fetching menu items with status: ${status}`);
-    
-    const { data, error } = await supabase
-      .from('menu')
-      .select('idmenu, name, point, category, image')
-      .eq('status', status)
-      .order('name');
+    const { data, error } = await supabase.from('menu')
+      .select('idmenu, name, point, category, image').eq('status', status).order('name');
 
-    if (error) {
-      console.error('[getMenuItems] Supabase error:', error);
-      return [];
-    }
-    
-    if (!data || data.length === 0) {
-      console.warn(`[getMenuItems] No menu items found for status: ${status}`);
-      return [];
-    }
+    if (error) throw error;
 
-    const validatedItems = data.map(item => ({
-      idmenu: item.idmenu || '',
-      name: item.name || 'ไม่ระบุชื่อ',
-      point: item.point || 0,
-      category: item.category || 'อื่นๆ',
-      image: item.image || ''
+    const menuItems = (data || []).map(item => ({
+        idmenu: item.idmenu || '',
+        name: item.name || 'ไม่ระบุชื่อ',
+        point: item.point || 0,
+        category: item.category || 'อื่นๆ',
+        image: item.image || ''
     }));
-
-    console.log(`[getMenuItems] Successfully fetched ${validatedItems.length} items`);
-    return validatedItems;
-    
+      
+    menuCache.set(cacheKey, menuItems); // Save to cache
+    return menuItems;
   } catch (e) {
     console.error('[getMenuItems] Unexpected error:', e);
-    return [];
+    return []; // Return empty on error, don't cache failures
   }
 }
 
-async function handleUserReply(event, userId, messageFn, errorMsg) {
+// --- REFACTORED: Wrapper Functions ---
+async function handleUserReply(event, userId, createMessageFn, errorMsg) {
   try {
-    const { user, found, error } = await getUserData(userId);
-    
-    if (!found) {
-      return reply(event, createUserNotFoundMessage());
-    }
-    
+    const { user, error } = await getUserData(userId);
     if (error) {
-      return reply(event, createErrorMessage(error));
+        return reply(event, error === 'ไม่พบข้อมูลผู้ใช้' ? createUserNotFoundMessage() : createErrorMessage(error));
     }
-    
-    return reply(event, messageFn(user));
-    
+    return reply(event, createMessageFn(user));
   } catch (e) {
     console.error('[handleUserReply] Error:', e);
     return reply(event, createErrorMessage(errorMsg));
@@ -215,8 +169,8 @@ async function handleUserReply(event, userId, messageFn, errorMsg) {
 
 async function handleWelcome(event, userId) {
   try {
-    const { user, found } = await getUserData(userId);
-    return reply(event, createWelcomeMessage(found ? user.name : null));
+    const { user } = await getUserData(userId);
+    return reply(event, createWelcomeMessage(user?.name || null));
   } catch (e) {
     console.error('[handleWelcome] Error:', e);
     return reply(event, createWelcomeMessage(null));
@@ -228,30 +182,11 @@ function reply(event, message) {
     console.error('[reply] No reply token found');
     return Promise.resolve();
   }
-
-  try {
-    const messageSize = JSON.stringify(message).length;
-    console.log(`[reply] Message size: ${messageSize} bytes`);
-    
-    if (messageSize > 50000) {
-      console.warn('[reply] Message too large, sending simple text instead');
-      const fallbackMessage = {
-        type: 'text',
-        text: 'ข้อมูลมีขนาดใหญ่เกินไป กรุณาใช้เว็บไซต์เพื่อดูรายละเอียด: https://dekcha-frontend.vercel.app/'
-      };
-      return client.replyMessage(event.replyToken, fallbackMessage);
-    }
-    
-    return client.replyMessage(event.replyToken, message);
-  } catch (error) {
-    console.error('[reply] Error sending message:', error);
-    const errorMessage = {
-      type: 'text',
-      text: 'เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง'
-    };
-    return client.replyMessage(event.replyToken, errorMessage);
-  }
+  return client.replyMessage(event.replyToken, message).catch(err => {
+    console.error('[reply] Error sending message:', err.originalError?.response?.data || err);
+  });
 }
+
 
 // --- IMPROVED FLEX MESSAGE GENERATORS ---
 function createWelcomeMessage(name) {
@@ -533,16 +468,15 @@ function createMenuDisplayMessage(menuItems, title, page = 1) {
   }
 
   // Pagination logic
-  const itemsPerPage = 5; // ปรับได้ ถ้าต้องการมากกว่านี้ แต่ไม่เกิน 10 เพื่อหลีกเลี่ยง size ใหญ่
+  const itemsPerPage = 5;
   const totalItems = menuItems.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  page = Math.max(1, Math.min(page, totalPages)); // Validate page
+  page = Math.max(1, Math.min(page, totalPages));
 
   const start = (page - 1) * itemsPerPage;
   const end = start + itemsPerPage;
   const pageItems = menuItems.slice(start, end);
 
-  // สร้าง bubbles สำหรับหน้านี้
   const menuBubbles = pageItems.map(item => {
     const imageUrl = item.image || 'https://via.placeholder.com/640x400?text=No+Image';
     return {
@@ -608,7 +542,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1) {
             type: 'button',
             action: {
               type: 'uri',
-              label: 'สั่งเลย',
+              label: 'แลกสิทธิ',
               uri: `https://dekcha-frontend.vercel.app/order/${item.idmenu}`
             },
             style: 'primary',
@@ -621,54 +555,57 @@ function createMenuDisplayMessage(menuItems, title, page = 1) {
     };
   });
 
-  // เพิ่ม pagination buttons ใน bubble สุดท้าย (หรือสร้าง bubble แยกสำหรับ navigation ถ้าต้องการ)
-  if (menuBubbles.length > 0) {
-    const navContents = [];
-    if (page > 1) {
-      navContents.push({
-        type: 'button',
-        action: {
-          type: 'message',
-          label: 'หน้าก่อนหน้า',
-          text: `${title} หน้า ${page - 1}`
-        },
-        style: 'secondary',
-        color: THEME.SECONDARY,
-        height: 'sm',
-        margin: 'sm'
-      });
-    }
-    if (page < totalPages) {
-      navContents.push({
-        type: 'button',
-        action: {
-          type: 'message',
-          label: 'หน้าต่อไป',
-          text: `${title} หน้า ${page + 1}`
-        },
-        style: 'secondary',
-        color: THEME.SECONDARY,
-        height: 'sm',
-        margin: 'sm'
-      });
-    }
-    navContents.push({
-      type: 'button',
-      action: {
-        type: 'message',
-        label: 'กลับเมนูหลัก',
-        text: 'เมนู'
-      },
-      style: 'secondary',
-      color: THEME.SECONDARY,
-      height: 'sm',
-      margin: 'sm'
-    });
-
-    // เพิ่ม nav ลง footer ของ bubble สุดท้าย
-    const lastBubble = menuBubbles[menuBubbles.length - 1];
-    lastBubble.footer.contents.push(...navContents);
+  if (totalPages > 1) {
+      const navContents = [];
+      if (page > 1) {
+        navContents.push({
+          type: 'button',
+          action: { type: 'message', label: '◀️ ก่อนหน้า', text: `${title} หน้า ${page - 1}`},
+          style: 'secondary', color: THEME.SECONDARY, height: 'sm', flex: 1
+        });
+      }
+      if (page < totalPages) {
+        navContents.push({
+          type: 'button',
+          action: { type: 'message', label: 'ต่อไป ▶️', text: `${title} หน้า ${page + 1}`},
+          style: 'secondary', color: THEME.SECONDARY, height: 'sm', flex: 1
+        });
+      }
+      
+      const navigationBubble = {
+          type: 'bubble',
+          body: {
+              type: 'box',
+              layout: 'vertical',
+              spacing: 'md',
+              contents: [
+                  {
+                      type: 'text',
+                      text: `หน้า ${page} / ${totalPages}`,
+                      align: 'center',
+                      color: THEME.TEXT_SECONDARY
+                  },
+                  {
+                      type: 'box',
+                      layout: 'horizontal',
+                      contents: navContents,
+                      spacing: 'sm',
+                      margin: 'md'
+                  },
+                  {
+                      type: 'button',
+                      action: { type: 'message', label: 'กลับเมนูหลัก', text: 'เมนู'},
+                      style: 'primary',
+                      color: THEME.PRIMARY,
+                      height: 'sm',
+                      margin: 'lg'
+                  }
+              ]
+          }
+      };
+      menuBubbles.push(navigationBubble);
   }
+
 
   return {
     type: 'flex',
