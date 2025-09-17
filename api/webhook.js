@@ -288,7 +288,7 @@ function createPointMessage(user) {
             action: {
               type: 'uri',
               label: 'แลกสิทธิพิเศษ',
-              uri: 'https://dekcha-frontend.vercel.app/login/menu'
+              uri: 'https://liff.line.me/2007232510-W1b9JQEX'
             },
             style: 'primary',
             color: THEME.PRIMARY,
@@ -462,78 +462,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
     };
   }
 
-  // Handle general menu separately (single card)
-  if (menuType === 0) {
-    const listItems = menuItems.map(item => ({
-      type: 'box',
-      layout: 'horizontal',
-      contents: [
-        {
-          type: 'image',
-          url: item.image || 'https://via.placeholder.com/100x100?text=No+Image',
-          size: 'md',
-          aspectRatio: '1:1',
-          aspectMode: 'cover',
-          cornerRadius: '8px',
-          flex: 1
-        },
-        {
-          type: 'box',
-          layout: 'vertical',
-          contents: [
-            {
-              type: 'text',
-              text: item.name,
-              weight: 'bold',
-              size: 'md',
-              wrap: true,
-              color: THEME.TEXT_PRIMARY
-            },
-            {
-              type: 'text',
-              text: `ใช้ ${item.point} แต้ม`,
-              size: 'sm',
-              color: THEME.PRIMARY
-            }
-          ],
-          flex: 4,
-          margin: 'sm'
-        }
-      ],
-      margin: 'lg'
-    }));
-
-    return {
-      type: 'flex',
-      altText: 'รายการเมนูทั่วไป',
-      contents: {
-        type: 'bubble',
-        body: {
-          type: 'box',
-          layout: 'vertical',
-          contents: [
-            headerBox(title),
-            { type: 'separator', margin: 'lg' },
-            ...listItems,
-            {
-              type: 'button',
-              action: { type: 'message', label: 'กลับเมนูหลัก', text: 'เมนู'},
-              style: 'primary',
-              color: THEME.PRIMARY,
-              height: 'sm',
-              margin: 'xl'
-            }
-          ],
-          paddingAll: '20px',
-          backgroundColor: THEME.BACKGROUND,
-          spacing: 'md'
-        }
-      }
-    };
-  }
-
-
-  // --- Promotion Menu with Pagination (Unchanged) ---
+  // Pagination logic
   const itemsPerPage = 5;
   const totalItems = menuItems.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -582,7 +511,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
             action: {
                 type: 'uri',
                 label: 'แลกสิทธิ์',
-                uri: `https://dekcha-frontend.vercel.app/order/${item.idmenu}`
+                uri: `https://dekcha-frontend.vercel.app/login/menu/${item.idmenu}`
             },
             style: 'primary',
             color: THEME.PRIMARY,
@@ -1032,4 +961,4 @@ function getMemberLevel(points) {
   if (points >= 30) return { title: 'SILVER', description: 'สมาชิกเงิน', color: '#C0C0C0' };
   if (points >= 10) return { title: 'BRONZE', description: 'สมาชิกทองแดง', color: '#CD7F32' };
   return { title: 'MEMBER', description: 'สมาชิกทั่วไป', color: THEME.SECONDARY };
-}
+} 
