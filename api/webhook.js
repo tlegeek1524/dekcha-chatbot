@@ -511,7 +511,7 @@ function createMenuDisplayMessage(menuItems, title, page = 1, menuType = 0) {
             action: {
                 type: 'uri',
                 label: 'แลกสิทธิ์',
-                uri: `https://dekcha-frontend.vercel.app/login/menu/${item.idmenu}`
+                uri: `https://liff.line.me/2007232510-W1b9JQEX`
             },
             style: 'primary',
             color: THEME.PRIMARY,
