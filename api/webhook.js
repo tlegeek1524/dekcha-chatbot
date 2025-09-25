@@ -812,7 +812,7 @@ function createUserNotFoundMessage() {
             action: {
               type: 'uri',
               label: 'ลงทะเบียนสมาชิก',
-              uri: 'https://dekcha-frontend.vercel.app/'
+              uri: 'https://liff.line.me/2007232510-W1b9JQEX'
             },
             style: 'primary',
             color: THEME.PRIMARY,
